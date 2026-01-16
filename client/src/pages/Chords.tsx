@@ -72,27 +72,53 @@ export default function Chords() {
             </header>
             
             {/* Instrument Selector */}
-            <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#1a1a2e]/60 border border-white/10">
-              <span className="text-sm font-semibold text-gray-300">Instrumento:</span>
+            <div className="flex items-center justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-[#1a1a2e]/80 to-[#2a2a3e]/60 border border-white/20 shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#06b6d4] to-[#0891b2] flex items-center justify-center text-2xl animate-pulse">
+                  {[
+                    { value: 'nylon-guitar', icon: '🎸' },
+                    { value: 'steel-guitar', icon: '🎼' },
+                    { value: 'piano', icon: '🎹' },
+                  ].find(i => i.value === instrument)?.icon}
+                </div>
+                <div>
+                  <span className="text-xs uppercase tracking-wider text-gray-400 font-semibold">Instrumento Ativo</span>
+                  <p className="text-base font-bold text-white">
+                    {[
+                      { value: 'nylon-guitar', label: 'Violão Nylon' },
+                      { value: 'steel-guitar', label: 'Violão Aço' },
+                      { value: 'piano', label: 'Piano' },
+                    ].find(i => i.value === instrument)?.label}
+                  </p>
+                </div>
+              </div>
+              
               <div className="flex gap-2">
                 {[
-                  { value: 'nylon-guitar', label: '🎸 Violão Nylon', icon: '🎸' },
-                  { value: 'steel-guitar', label: '🎸 Violão Aço', icon: '🎼' },
-                  { value: 'piano', label: '🎹 Piano', icon: '🎹' },
+                  { value: 'nylon-guitar', label: 'Nylon', icon: '🎸', desc: 'Suave e quente' },
+                  { value: 'steel-guitar', label: 'Aço', icon: '🎼', desc: 'Brilhante' },
+                  { value: 'piano', label: 'Piano', icon: '🎹', desc: 'Percussivo' },
                 ].map((item) => (
-                  <Button
+                  <button
                     key={item.value}
                     onClick={() => handleInstrumentChange(item.value as InstrumentType)}
-                    variant={instrument === item.value ? 'default' : 'outline'}
                     className={
                       instrument === item.value
-                        ? 'bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white'
-                        : 'bg-transparent border-white/20 text-gray-300 hover:bg-white/5'
+                        ? 'relative px-4 py-3 rounded-xl bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-semibold shadow-[0_0_20px_rgba(6,182,212,0.5)] transition-all scale-105'
+                        : 'px-4 py-3 rounded-xl bg-[#2a2a3e]/60 border border-white/10 text-gray-300 hover:bg-[#323246] hover:border-white/20 transition-all'
                     }
                   >
-                    <span className="mr-2">{item.icon}</span>
-                    {item.label.split(' ')[1]}
-                  </Button>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-xl">{item.icon}</span>
+                      <span className="text-xs font-semibold">{item.label}</span>
+                      {instrument === item.value && (
+                        <span className="text-[10px] text-cyan-200">{item.desc}</span>
+                      )}
+                    </div>
+                    {instrument === item.value && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white animate-pulse" />
+                    )}
+                  </button>
                 ))}
               </div>
             </div>
