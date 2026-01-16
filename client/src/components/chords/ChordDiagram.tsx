@@ -1,3 +1,5 @@
+import { motion } from 'framer-motion';
+
 interface ChordDiagramProps {
   frets: (number | 'x')[];
   fingers: (number | 0)[];
@@ -47,12 +49,28 @@ export function ChordDiagram({ frets, fingers, name, size = 'md' }: ChordDiagram
   const fretboardWidth = (numStrings - 1) * config.stringSpacing;
   
   return (
-    <div className="flex flex-col items-center gap-3">
+    <motion.div 
+      className="flex flex-col items-center gap-3"
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+      key={name}
+    >
       {/* Nome do Acorde */}
-      <h3 className={`${config.titleSize} font-bold text-white`}>{name}</h3>
+      <motion.h3 
+        className={`${config.titleSize} font-bold text-white`}
+        initial={{ y: -10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.1, duration: 0.3 }}
+      >
+        {name}
+      </motion.h3>
       
       {/* SVG do Diagrama */}
-      <svg
+      <motion.svg
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.4 }}
         width={config.width}
         height={config.height}
         viewBox={`0 0 ${config.width} ${config.height}`}
@@ -211,7 +229,7 @@ export function ChordDiagram({ frets, fingers, name, size = 'md' }: ChordDiagram
             {note}
           </text>
         ))}
-      </svg>
+      </motion.svg>
       
       {/* Legenda dos dedos */}
       <div className={`${config.fontSize} text-gray-400 text-center space-y-1`}>
@@ -244,6 +262,6 @@ export function ChordDiagram({ frets, fingers, name, size = 'md' }: ChordDiagram
           </span>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

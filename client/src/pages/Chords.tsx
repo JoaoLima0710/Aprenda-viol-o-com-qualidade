@@ -8,12 +8,14 @@ import { Button } from '@/components/ui/button';
 import { useGamificationStore } from '@/stores/useGamificationStore';
 import { useChordStore } from '@/stores/useChordStore';
 import { chords, getChordsByDifficulty } from '@/data/chords';
-import { Play, Check, Lock } from 'lucide-react';
+import { Play, Check, Lock, Volume2, StopCircle } from 'lucide-react';
+import { audioService } from '@/services/AudioService';
 
 export default function Chords() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [selectedChord, setSelectedChord] = useState(chords[0]);
   const [filter, setFilter] = useState<'all' | 'beginner' | 'intermediate' | 'advanced'>('all');
+  const [isPlaying, setIsPlaying] = useState(false);
   
   const { xp, level, xpToNextLevel, currentStreak } = useGamificationStore();
   const { progress, setCurrentChord } = useChordStore();
@@ -25,6 +27,17 @@ export default function Chords() {
   const handleChordClick = (chord: typeof chords[0]) => {
     setSelectedChord(chord);
     setCurrentChord(chord.id);
+  };
+  
+  const handlePlayChord = async () => {
+    setIsPlaying(true);
+    await audioService.playChord(selectedChord.name, 2.5);
+    setTimeout(() => setIsPlaying(false), 2500);
+  };
+  
+  const handleStopChord = () => {
+    audioService.stopAll();
+    setIsPlaying(false);
   };
   
   return (
@@ -161,10 +174,23 @@ export default function Chords() {
                       </div>
                       
                       <div className="flex gap-3 pt-4">
-                        <Button className="flex-1 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] hover:from-[#22d3ee] hover:to-[#06b6d4] text-white font-semibold">
-                          <Play className="w-5 h-5 mr-2" />
-                          Ouvir Acorde
-                        </Button>
+                        {!isPlaying ? (
+                          <Button 
+                            onClick={handlePlayChord}
+                            className="flex-1 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] hover:from-[#22d3ee] hover:to-[#06b6d4] text-white font-semibold"
+                          >
+                            <Play className="w-5 h-5 mr-2" />
+                            Ouvir Acorde
+                          </Button>
+                        ) : (
+                          <Button 
+                            onClick={handleStopChord}
+                            className="flex-1 bg-gradient-to-r from-[#ef4444] to-[#dc2626] hover:from-[#f87171] hover:to-[#ef4444] text-white font-semibold"
+                          >
+                            <StopCircle className="w-5 h-5 mr-2" />
+                            Parar
+                          </Button>
+                        )}
                         <Button className="flex-1 bg-gradient-to-r from-[#a855f7] to-[#8b5cf6] hover:from-[#c084fc] hover:to-[#a855f7] text-white font-semibold">
                           Praticar
                         </Button>
@@ -243,10 +269,23 @@ export default function Chords() {
               </div>
               
               <div className="flex gap-2">
-                <Button className="flex-1 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-semibold">
-                  <Play className="w-4 h-4 mr-2" />
-                  Ouvir
-                </Button>
+                {!isPlaying ? (
+                  <Button 
+                    onClick={handlePlayChord}
+                    className="flex-1 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-semibold"
+                  >
+                    <Play className="w-4 h-4 mr-2" />
+                    Ouvir
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={handleStopChord}
+                    className="flex-1 bg-gradient-to-r from-[#ef4444] to-[#dc2626] text-white font-semibold"
+                  >
+                    <StopCircle className="w-4 h-4 mr-2" />
+                    Parar
+                  </Button>
+                )}
                 <Button className="flex-1 bg-gradient-to-r from-[#a855f7] to-[#8b5cf6] text-white font-semibold">
                   Praticar
                 </Button>
