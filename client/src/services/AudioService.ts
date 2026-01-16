@@ -46,76 +46,116 @@ export type InstrumentType = 'nylon-guitar' | 'steel-guitar' | 'piano';
 class AudioService {
   private synth: Tone.PolySynth | null = null;
   private reverb: Tone.Reverb | null = null;
+  private chorus: Tone.Chorus | null = null;
   private isInitialized = false;
   private currentInstrument: InstrumentType = 'nylon-guitar';
 
   async initialize() {
     if (this.isInitialized) {
-      console.log('✅ AudioService already initialized');
       return true;
     }
 
     try {
-      console.log('🎵 Initializing AudioService...');
-      
-      // Start Tone.js context
       await Tone.start();
-      console.log('✅ Tone.js context started');
+      console.log('🎵 Tone.js context started');
       
-      // Create reverb for natural ambience
+      // Create effects chain
       this.reverb = new Tone.Reverb({
-        decay: 1.5,
+        decay: 2.5,
         wet: 0.3,
       }).toDestination();
-      
-      // Create initial synth
-      this.createSynth(this.currentInstrument);
 
+      this.chorus = new Tone.Chorus({
+        frequency: 1.5,
+        delayTime: 3.5,
+        depth: 0.7,
+        wet: 0.2,
+      }).connect(this.reverb);
+
+      await this.reverb.generate();
+      
+      // Create synth with current instrument
+      this.createSynth(this.currentInstrument);
+      
       this.isInitialized = true;
-      console.log('✅ AudioService initialized successfully');
+      console.log('✅ AudioService initialized with', this.currentInstrument);
       return true;
     } catch (error) {
-      console.error('❌ Failed to initialize AudioService:', error);
+      console.error('❌ Error initializing AudioService:', error);
       return false;
     }
   }
 
-  private parseChordName(chordName: string): { root: string; type: string } {
-    // Remove espaços
-    chordName = chordName.trim();
-    
-    // Exemplos: C, Cm, C7, Cmaj7, etc
-    const match = chordName.match(/^([A-G][#b]?)(.*)?$/);
-    
-    if (!match) {
-      console.warn('Invalid chord name:', chordName);
-      return { root: 'C', type: 'major' };
+  private createSynth(instrument: InstrumentType) {
+    // Dispose old synth if exists
+    if (this.synth) {
+      this.synth.dispose();
     }
 
-    const root = match[1];
-    let type = match[2] || '';
-
-    // Mapear tipos de acordes
-    const typeMap: Record<string, string> = {
-      '': 'major',
-      'm': 'minor',
-      'min': 'minor',
-      '7': '7',
-      'm7': 'm7',
-      'maj7': 'maj7',
-      'sus2': 'sus2',
-      'sus4': 'sus4',
-      'dim': 'dim',
-      'aug': 'aug',
-      '6': '6',
-      'm6': 'm6',
-      '9': '9',
-      'add9': 'add9',
+    const instrumentConfigs = {
+      'nylon-guitar': {
+        oscillator: {
+          type: 'triangle' as const,
+          partialCount: 8,
+        },
+        envelope: {
+          attack: 0.008,
+          decay: 0.3,
+          sustain: 0.4,
+          release: 1.2,
+        },
+        volume: -8,
+      },
+      'steel-guitar': {
+        oscillator: {
+          type: 'sawtooth' as const,
+          partialCount: 12,
+        },
+        envelope: {
+          attack: 0.005,
+          decay: 0.2,
+          sustain: 0.5,
+          release: 0.8,
+        },
+        volume: -10,
+      },
+      'piano': {
+        oscillator: {
+          type: 'sine' as const,
+          partialCount: 16,
+        },
+        envelope: {
+          attack: 0.002,
+          decay: 0.4,
+          sustain: 0.2,
+          release: 1.5,
+        },
+        volume: -6,
+      },
     };
 
-    type = typeMap[type] || 'major';
+    const config = instrumentConfigs[instrument];
+    
+    this.synth = new Tone.PolySynth(Tone.Synth, config);
+    this.synth.maxPolyphony = 32;
 
-    return { root, type };
+    // Connect to effects chain
+    if (this.chorus) {
+      this.synth.connect(this.chorus);
+    }
+  }
+
+  async setInstrument(instrument: InstrumentType) {
+    console.log('🎸 Changing instrument to:', instrument);
+    this.currentInstrument = instrument;
+    
+    if (this.isInitialized) {
+      this.createSynth(instrument);
+    }
+  }
+
+  getInstrument(): InstrumentType {
+    return this.currentInstrument;
   }
 
   private getChordNotes(root: string, chordType: string): number[] {
@@ -172,32 +212,40 @@ class AudioService {
     }
 
     try {
-      // Stop any playing notes
-      this.stopAll();
+      // Parse chord name (e.g., "C", "Am", "G7")
+      const match = chordName.match(/^([A-G][#b]?)(.*)/);
+      if (!match) {
+        console.error('❌ Invalid chord name:', chordName);
+        return;
+      }
 
-      const { root, type } = this.parseChordName(chordName);
-      console.log('📝 Parsed chord:', { root, type });
+      const root = match[1];
+      let chordType = match[2] || 'major';
       
-      const frequencies = this.getChordNotes(root, type);
-      console.log('🎼 Frequencies:', frequencies);
+      // Map common chord suffixes
+      if (chordType === 'm') chordType = 'minor';
+      if (chordType === '') chordType = 'major';
+
+      console.log('🎵 Parsed:', { root, chordType });
+
+      const frequencies = this.getChordNotes(root, chordType);
+      console.log('🎶 Frequencies:', frequencies);
+
+      // Play chord as arpeggio
+      const now = Tone.now();
+      const noteDelay = 0.05; // 50ms between notes
       
-      // Play chord with slight arpeggio
       frequencies.forEach((freq, index) => {
-        setTimeout(() => {
-          console.log(`🎵 Playing note ${index + 1}:`, freq.toFixed(2), 'Hz');
-          this.synth?.triggerAttackRelease(freq, duration, Tone.now(), 0.7);
-        }, index * 50);
+        this.synth!.triggerAttackRelease(freq, duration, now + index * noteDelay);
       });
-      
-      console.log('✅ Chord playing');
+
+      console.log('✅ Chord played successfully');
     } catch (error) {
       console.error('❌ Error playing chord:', error);
     }
   }
 
   async playChordStrummed(chordName: string, duration: number = 2.5) {
-    console.log('🎸 playChordStrummed called:', chordName);
-    
     const initialized = await this.initialize();
     if (!initialized || !this.synth) {
       console.error('❌ Synth not available');
@@ -205,72 +253,25 @@ class AudioService {
     }
 
     try {
-      this.stopAll();
+      const match = chordName.match(/^([A-G][#b]?)(.*)/);
+      if (!match) return;
 
-      const { root, type } = this.parseChordName(chordName);
-      const frequencies = this.getChordNotes(root, type);
-      
-      // Play all notes together
-      this.synth.triggerAttackRelease(frequencies, duration, Tone.now(), 0.8);
-      
-      console.log('✅ Strummed chord playing');
+      const root = match[1];
+      let chordType = match[2] || 'major';
+      if (chordType === 'm') chordType = 'minor';
+      if (chordType === '') chordType = 'major';
+
+      const frequencies = this.getChordNotes(root, chordType);
+
+      // Play all notes together (strummed)
+      const now = Tone.now();
+      frequencies.forEach((freq) => {
+        this.synth!.triggerAttackRelease(freq, duration, now);
+      });
+
+      console.log('✅ Strummed chord played');
     } catch (error) {
       console.error('❌ Error playing strummed chord:', error);
-    }
-  }
-
-  async playScaleOld(scaleName: string, root: string = 'C', pattern: 'ascending' | 'descending' | 'both' = 'ascending') {
-    const initialized = await this.initialize();
-    if (!initialized || !this.synth) {
-      console.error('❌ Synth not available');
-      return;
-    }
-
-    try {
-      this.stopAll();
-
-      // Scale intervals (major scale as example)
-      const scaleIntervals = [0, 2, 4, 5, 7, 9, 11, 12];
-      const rootFreq = NOTE_FREQUENCIES[root] || NOTE_FREQUENCIES['C'];
-      
-      const frequencies = scaleIntervals.map(interval => 
-        rootFreq * Math.pow(2, interval / 12)
-      );
-
-      let notesToPlay = frequencies;
-      
-      if (pattern === 'descending') {
-        notesToPlay = [...frequencies].reverse();
-      } else if (pattern === 'both') {
-        notesToPlay = [...frequencies, ...frequencies.slice(0, -1).reverse()];
-      }
-
-      // Play scale
-      notesToPlay.forEach((freq, index) => {
-        setTimeout(() => {
-          this.synth?.triggerAttackRelease(freq, '8n', Tone.now(), 0.6);
-        }, index * 250);
-      });
-      
-      console.log('✅ Scale playing');
-    } catch (error) {
-      console.error('❌ Error playing scale:', error);
-    }
-  }
-
-  async playSingleNote(note: string, duration: number = 1) {
-    const initialized = await this.initialize();
-    if (!initialized || !this.synth) {
-      console.error('❌ Synth not available');
-      return;
-    }
-
-    try {
-      const frequency = NOTE_FREQUENCIES[note] || NOTE_FREQUENCIES['C'];
-      this.synth.triggerAttackRelease(frequency, duration, Tone.now(), 0.7);
-      console.log('✅ Note playing:', note, frequency, 'Hz');
-    } catch (error) {
-      console.error('❌ Error playing note:', error);
     }
   }
 
@@ -281,82 +282,8 @@ class AudioService {
     }
   }
 
-  setVolume(volume: number) {
-    if (this.synth) {
-      // Volume em dB (-60 a 0)
-      this.synth.volume.value = volume;
-      console.log('🔊 Volume set to:', volume, 'dB');
-    }
-  }
-
-  private createSynth(instrument: InstrumentType) {
-    // Dispose old synth if exists
-    if (this.synth) {
-      this.synth.disconnect();
-      this.synth.dispose();
-    }
-
-    const instrumentPresets = {
-      'nylon-guitar': {
-        oscillator: { type: 'sine8' as const },
-        envelope: {
-          attack: 0.008,
-          decay: 0.4,
-          sustain: 0.3,
-          release: 2.0,
-        },
-        volume: -8,
-      },
-      'steel-guitar': {
-        oscillator: { type: 'triangle8' as const },
-        envelope: {
-          attack: 0.005,
-          decay: 0.3,
-          sustain: 0.5,
-          release: 1.5,
-        },
-        volume: -6,
-      },
-      'piano': {
-        oscillator: { type: 'sine' as const },
-        envelope: {
-          attack: 0.001,
-          decay: 0.2,
-          sustain: 0.1,
-          release: 0.8,
-        },
-        volume: -10,
-      },
-    };
-
-    const preset = instrumentPresets[instrument];
-
-    this.synth = new Tone.PolySynth(Tone.Synth, {
-      oscillator: preset.oscillator,
-      envelope: preset.envelope,
-    }).toDestination();
-
-    // Connect to reverb
-    if (this.reverb) {
-      this.synth.connect(this.reverb);
-    }
-
-    this.synth.volume.value = preset.volume;
-    console.log('🎸 Instrument changed to:', instrument);
-  }
-
-  setInstrument(instrument: InstrumentType) {
-    this.currentInstrument = instrument;
-    if (this.isInitialized) {
-      this.createSynth(instrument);
-    }
-  }
-
-  getCurrentInstrument(): InstrumentType {
-    return this.currentInstrument;
-  }
-
   dispose() {
+    this.stopAll();
     if (this.synth) {
       this.synth.dispose();
       this.synth = null;
@@ -365,10 +292,13 @@ class AudioService {
       this.reverb.dispose();
       this.reverb = null;
     }
+    if (this.chorus) {
+      this.chorus.dispose();
+      this.chorus = null;
+    }
     this.isInitialized = false;
     console.log('🗑️ AudioService disposed');
   }
 }
 
-// Singleton instance
 export const audioService = new AudioService();

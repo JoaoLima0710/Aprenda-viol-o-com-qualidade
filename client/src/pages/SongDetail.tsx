@@ -4,7 +4,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { MobileSidebar } from '@/components/layout/MobileSidebar';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
-import { ChordSheet } from '@/components/songs/ChordSheet';
+import { ChordSheetWithPlayer } from '@/components/songs/ChordSheetWithPlayer';
 import { Metronome } from '@/components/practice/Metronome';
 import { PracticeMode } from '@/components/practice/PracticeMode';
 import { AudioRecorder } from '@/components/practice/AudioRecorder';
@@ -246,7 +246,11 @@ export default function SongDetail() {
             {/* Chord Sheet */}
             <div>
               <h2 className="text-2xl font-bold text-white mb-4">Cifra Completa</h2>
-              <ChordSheet chordSheet={song.chordSheet} />
+              <ChordSheetWithPlayer 
+                chordSheet={song.chordSheet} 
+                bpm={song.bpm}
+                title={song.title}
+              />
             </div>
             
             {/* Tips */}
@@ -398,7 +402,11 @@ export default function SongDetail() {
           {/* Chord Sheet */}
           <div>
             <h3 className="text-lg font-bold text-white mb-3">Cifra</h3>
-            <ChordSheet chordSheet={song.chordSheet} />
+            <ChordSheetWithPlayer 
+              chordSheet={song.chordSheet} 
+              bpm={song.bpm}
+              title={song.title}
+            />
           </div>
           
           {/* Tips */}
