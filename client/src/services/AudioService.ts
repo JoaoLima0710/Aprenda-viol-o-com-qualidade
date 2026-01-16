@@ -55,21 +55,29 @@ class AudioService {
       await Tone.start();
       console.log('✅ Tone.js context started');
       
-      // Create synth with guitar-like sound
+      // Create synth with warm, guitar-like sound
       this.synth = new Tone.PolySynth(Tone.Synth, {
         oscillator: {
-          type: 'triangle',
+          type: 'sine8', // Sine wave with 8 harmonics for warmth
         },
         envelope: {
-          attack: 0.005,
-          decay: 0.3,
-          sustain: 0.4,
-          release: 1.5,
+          attack: 0.008,
+          decay: 0.4,
+          sustain: 0.3,
+          release: 2.0,
         },
       }).toDestination();
+      
+      // Add reverb for natural ambience
+      const reverb = new Tone.Reverb({
+        decay: 1.5,
+        wet: 0.3,
+      }).toDestination();
+      
+      this.synth.connect(reverb);
 
       // Set volume
-      this.synth.volume.value = -6;
+      this.synth.volume.value = -8;
 
       this.isInitialized = true;
       console.log('✅ AudioService initialized successfully');

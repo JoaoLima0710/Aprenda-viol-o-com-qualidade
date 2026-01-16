@@ -40,6 +40,11 @@ export default function Chords() {
     setIsPlaying(false);
   };
   
+  const handlePractice = () => {
+    // Navigate to practice mode with selected chord
+    window.location.href = `/practice?chord=${selectedChord.id}`;
+  };
+  
   return (
     <>
       {/* DESKTOP VERSION */}
@@ -191,7 +196,10 @@ export default function Chords() {
                             Parar
                           </Button>
                         )}
-                        <Button className="flex-1 bg-gradient-to-r from-[#a855f7] to-[#8b5cf6] hover:from-[#c084fc] hover:to-[#a855f7] text-white font-semibold">
+                        <Button 
+                          onClick={handlePractice}
+                          className="flex-1 bg-gradient-to-r from-[#a855f7] to-[#8b5cf6] hover:from-[#c084fc] hover:to-[#a855f7] text-white font-semibold"
+                        >
                           Praticar
                         </Button>
                       </div>
