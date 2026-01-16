@@ -38,9 +38,13 @@ const CHORD_INTERVALS: Record<string, number[]> = {
   'add9': [0, 4, 7, 14],
 };
 
+export type InstrumentType = 'nylon-guitar' | 'steel-guitar' | 'piano';
+
 class AudioService {
   private synth: Tone.PolySynth | null = null;
+  private reverb: Tone.Reverb | null = null;
   private isInitialized = false;
+  private currentInstrument: InstrumentType = 'nylon-guitar';
 
   async initialize() {
     if (this.isInitialized) {
@@ -55,29 +59,14 @@ class AudioService {
       await Tone.start();
       console.log('✅ Tone.js context started');
       
-      // Create synth with warm, guitar-like sound
-      this.synth = new Tone.PolySynth(Tone.Synth, {
-        oscillator: {
-          type: 'sine8', // Sine wave with 8 harmonics for warmth
-        },
-        envelope: {
-          attack: 0.008,
-          decay: 0.4,
-          sustain: 0.3,
-          release: 2.0,
-        },
-      }).toDestination();
-      
-      // Add reverb for natural ambience
-      const reverb = new Tone.Reverb({
+      // Create reverb for natural ambience
+      this.reverb = new Tone.Reverb({
         decay: 1.5,
         wet: 0.3,
       }).toDestination();
       
-      this.synth.connect(reverb);
-
-      // Set volume
-      this.synth.volume.value = -8;
+      // Create initial synth
+      this.createSynth(this.currentInstrument);
 
       this.isInitialized = true;
       console.log('✅ AudioService initialized successfully');
@@ -263,13 +252,84 @@ class AudioService {
     }
   }
 
+  private createSynth(instrument: InstrumentType) {
+    // Dispose old synth if exists
+    if (this.synth) {
+      this.synth.disconnect();
+      this.synth.dispose();
+    }
+
+    const instrumentPresets = {
+      'nylon-guitar': {
+        oscillator: { type: 'sine8' as const },
+        envelope: {
+          attack: 0.008,
+          decay: 0.4,
+          sustain: 0.3,
+          release: 2.0,
+        },
+        volume: -8,
+      },
+      'steel-guitar': {
+        oscillator: { type: 'triangle8' as const },
+        envelope: {
+          attack: 0.005,
+          decay: 0.3,
+          sustain: 0.5,
+          release: 1.5,
+        },
+        volume: -6,
+      },
+      'piano': {
+        oscillator: { type: 'sine' as const },
+        envelope: {
+          attack: 0.001,
+          decay: 0.2,
+          sustain: 0.1,
+          release: 0.8,
+        },
+        volume: -10,
+      },
+    };
+
+    const preset = instrumentPresets[instrument];
+
+    this.synth = new Tone.PolySynth(Tone.Synth, {
+      oscillator: preset.oscillator,
+      envelope: preset.envelope,
+    }).toDestination();
+
+    // Connect to reverb
+    if (this.reverb) {
+      this.synth.connect(this.reverb);
+    }
+
+    this.synth.volume.value = preset.volume;
+    console.log('🎸 Instrument changed to:', instrument);
+  }
+
+  setInstrument(instrument: InstrumentType) {
+    this.currentInstrument = instrument;
+    if (this.isInitialized) {
+      this.createSynth(instrument);
+    }
+  }
+
+  getCurrentInstrument(): InstrumentType {
+    return this.currentInstrument;
+  }
+
   dispose() {
     if (this.synth) {
       this.synth.dispose();
       this.synth = null;
-      this.isInitialized = false;
-      console.log('🗑️ AudioService disposed');
     }
+    if (this.reverb) {
+      this.reverb.dispose();
+      this.reverb = null;
+    }
+    this.isInitialized = false;
+    console.log('🗑️ AudioService disposed');
   }
 }
 

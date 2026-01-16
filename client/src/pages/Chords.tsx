@@ -9,13 +9,14 @@ import { useGamificationStore } from '@/stores/useGamificationStore';
 import { useChordStore } from '@/stores/useChordStore';
 import { chords, getChordsByDifficulty } from '@/data/chords';
 import { Play, Check, Lock, Volume2, StopCircle } from 'lucide-react';
-import { audioService } from '@/services/AudioService';
+import { audioService, InstrumentType } from '@/services/AudioService';
 
 export default function Chords() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [selectedChord, setSelectedChord] = useState(chords[0]);
   const [filter, setFilter] = useState<'all' | 'beginner' | 'intermediate' | 'advanced'>('all');
   const [isPlaying, setIsPlaying] = useState(false);
+  const [instrument, setInstrument] = useState<InstrumentType>('nylon-guitar');
   
   const { xp, level, xpToNextLevel, currentStreak } = useGamificationStore();
   const { progress, setCurrentChord } = useChordStore();
@@ -33,6 +34,11 @@ export default function Chords() {
     setIsPlaying(true);
     await audioService.playChord(selectedChord.name, 2.5);
     setTimeout(() => setIsPlaying(false), 2500);
+  };
+  
+  const handleInstrumentChange = (newInstrument: InstrumentType) => {
+    setInstrument(newInstrument);
+    audioService.setInstrument(newInstrument);
   };
   
   const handleStopChord = () => {
@@ -64,6 +70,32 @@ export default function Chords() {
               <h1 className="text-4xl font-bold text-white mb-2">Biblioteca de Acordes</h1>
               <p className="text-gray-400">Aprenda e pratique acordes de violão</p>
             </header>
+            
+            {/* Instrument Selector */}
+            <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#1a1a2e]/60 border border-white/10">
+              <span className="text-sm font-semibold text-gray-300">Instrumento:</span>
+              <div className="flex gap-2">
+                {[
+                  { value: 'nylon-guitar', label: '🎸 Violão Nylon', icon: '🎸' },
+                  { value: 'steel-guitar', label: '🎸 Violão Aço', icon: '🎼' },
+                  { value: 'piano', label: '🎹 Piano', icon: '🎹' },
+                ].map((item) => (
+                  <Button
+                    key={item.value}
+                    onClick={() => handleInstrumentChange(item.value as InstrumentType)}
+                    variant={instrument === item.value ? 'default' : 'outline'}
+                    className={
+                      instrument === item.value
+                        ? 'bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white'
+                        : 'bg-transparent border-white/20 text-gray-300 hover:bg-white/5'
+                    }
+                  >
+                    <span className="mr-2">{item.icon}</span>
+                    {item.label.split(' ')[1]}
+                  </Button>
+                ))}
+              </div>
+            </div>
             
             {/* Filters */}
             <div className="flex gap-3">
