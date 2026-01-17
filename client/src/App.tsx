@@ -1,5 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { InstallPWA } from "@/components/InstallPWA";
+import { usePWA } from "@/hooks/usePWA";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -44,6 +46,9 @@ function Router() {
 // - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
 function App() {
+  // Initialize PWA hooks
+  usePWA();
+
   return (
     <ErrorBoundary>
       <ThemeProvider
@@ -52,6 +57,7 @@ function App() {
       >
         <TooltipProvider>
           <Toaster />
+          <InstallPWA />
           <Router />
         </TooltipProvider>
       </ThemeProvider>
