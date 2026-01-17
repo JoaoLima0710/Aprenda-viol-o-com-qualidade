@@ -10,6 +10,8 @@ import { useGamificationStore } from '@/stores/useGamificationStore';
 import { useAudioSettingsStore } from '@/stores/useAudioSettingsStore';
 import { unifiedAudioService } from '@/services/UnifiedAudioService';
 import { Settings as SettingsIcon, Music, Volume2, Waves, Sliders } from 'lucide-react';
+import { NotificationSettings } from '@/components/NotificationSettings';
+import { AudioCacheSettings } from '@/components/AudioCacheSettings';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
@@ -95,10 +97,31 @@ export default function Settings() {
               </div>
             </div>
 
+            {/* Notification Settings */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="mb-6"
+            >
+              <NotificationSettings />
+            </motion.div>
+
+            {/* Audio Cache Settings */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="mb-6"
+            >
+              <AudioCacheSettings />
+            </motion.div>
+
             {/* Audio Settings */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
               className="bg-gradient-to-br from-[#1a1a2e] to-[#2a2a3e] rounded-3xl p-8 border border-white/10 mb-6"
             >
               <div className="flex items-center gap-3 mb-6">
