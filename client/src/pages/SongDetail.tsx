@@ -14,8 +14,9 @@ import { useGamificationStore } from '@/stores/useGamificationStore';
 import { useSongStore } from '@/stores/useSongStore';
 import { getSongById } from '@/data/songs';
 import { PdfExportService } from '@/services/PdfExportService';
+import { cifraClubService } from '@/services/CifraClubService';
 import { toast } from 'sonner';
-import { ArrowLeft, Heart, Play, Music, Clock, TrendingUp, Lightbulb, Mic, Maximize2, Download } from 'lucide-react';
+import { ArrowLeft, Heart, Play, Music, Clock, TrendingUp, Lightbulb, Mic, Maximize2, Download, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const genreColors: Record<string, string> = {
@@ -198,6 +199,15 @@ export default function SongDetail() {
                       Karaokê
                     </Button>
                   </div>
+                  
+                  <Button
+                    onClick={() => cifraClubService.openCifraClub(song.artist, song.title)}
+                    variant="outline"
+                    className="w-full bg-transparent border-white/20 text-white hover:bg-white/5 py-6 text-lg"
+                  >
+                    <ExternalLink className="w-5 h-5 mr-2" />
+                    Ver Cifra Completa no Cifra Club
+                  </Button>
                   <Button
                     onClick={handleExportPdf}
                     variant="outline"

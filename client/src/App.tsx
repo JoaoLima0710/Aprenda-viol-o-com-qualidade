@@ -1,7 +1,8 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { InstallPWA } from "@/components/InstallPWA";
-import { usePWA } from "@/hooks/usePWA";
+import { InstallPWA } from '@/components/InstallPWA';
+import { OfflineStatus } from '@/components/offline/OfflineStatus';
+import { usePWA } from '@/hooks/usePWA';
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -58,6 +59,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <InstallPWA />
+      <OfflineStatus />
           <Router />
         </TooltipProvider>
       </ThemeProvider>
