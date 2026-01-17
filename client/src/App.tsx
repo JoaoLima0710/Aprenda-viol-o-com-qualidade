@@ -9,7 +9,8 @@ import Chords from "./pages/Chords";
 import Scales from "./pages/Scales";
 import Missions from "./pages/Missions";
 import Achievements from "./pages/Achievements";
-import Profile from "./pages/Profile";
+import Profile from './pages/Profile';
+import Settings from './pages/Settings';
 import Songs from "./pages/Songs";
 import SongDetail from "./pages/SongDetail";
 import Practice from "./pages/Practice";
@@ -23,7 +24,8 @@ function Router() {
       <Route path={"/scales"} component={Scales} />
       <Route path={"/missions"} component={Missions} />
       <Route path={"/achievements"} component={Achievements} />
-      <Route path={"/profile"} component={Profile} />
+       <Route path="/profile" component={Profile} />
+      <Route path="/settings" component={Settings} />
       <Route path={"/songs"} component={Songs} />
       <Route path={"/songs/:id"} component={SongDetail} />
       <Route path={"/practice"} component={Practice} />

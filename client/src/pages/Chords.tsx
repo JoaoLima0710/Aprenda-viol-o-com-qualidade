@@ -9,7 +9,9 @@ import { useGamificationStore } from '@/stores/useGamificationStore';
 import { useChordStore } from '@/stores/useChordStore';
 import { chords, getChordsByDifficulty } from '@/data/chords';
 import { Play, Check, Lock, Volume2, StopCircle } from 'lucide-react';
-import { audioService, InstrumentType } from '@/services/AudioService';
+import { unifiedAudioService } from '@/services/UnifiedAudioService';
+import { useAudioSettingsStore } from '@/stores/useAudioSettingsStore';
+import type { InstrumentType } from '@/services/AudioServiceWithSamples';
 
 const INSTRUMENT_STORAGE_KEY = 'musictutor-instrument-preference';
 
@@ -19,18 +21,7 @@ export default function Chords() {
   const [filter, setFilter] = useState<'all' | 'beginner' | 'intermediate' | 'advanced'>('all');
   const [isPlaying, setIsPlaying] = useState(false);
   
-  // Load instrument preference from localStorage
-  const [instrument, setInstrument] = useState<InstrumentType>(() => {
-    try {
-      const saved = localStorage.getItem(INSTRUMENT_STORAGE_KEY);
-      if (saved && ['nylon-guitar', 'steel-guitar', 'piano'].includes(saved)) {
-        return saved as InstrumentType;
-      }
-    } catch (error) {
-      console.error('Failed to load instrument preference:', error);
-    }
-    return 'nylon-guitar';
-  });
+  const { instrument, setInstrument: setGlobalInstrument } = useAudioSettingsStore();
   
   const { xp, level, xpToNextLevel, currentStreak } = useGamificationStore();
   const { progress, setCurrentChord } = useChordStore();
@@ -46,30 +37,22 @@ export default function Chords() {
   
   const handlePlayChord = async () => {
     setIsPlaying(true);
-    await audioService.playChord(selectedChord.name, 2.5);
+    await unifiedAudioService.playChord(selectedChord.name, 2.5);
     setTimeout(() => setIsPlaying(false), 2500);
   };
   
   // Initialize audio service with saved instrument on mount
   useEffect(() => {
-    audioService.setInstrument(instrument);
-  }, []);
+    unifiedAudioService.setInstrument(instrument);
+  }, [instrument]);
   
   const handleInstrumentChange = (newInstrument: InstrumentType) => {
-    setInstrument(newInstrument);
-    audioService.setInstrument(newInstrument);
-    
-    // Save preference to localStorage
-    try {
-      localStorage.setItem(INSTRUMENT_STORAGE_KEY, newInstrument);
-      console.log('✅ Instrument preference saved:', newInstrument);
-    } catch (error) {
-      console.error('❌ Failed to save instrument preference:', error);
-    }
+    setGlobalInstrument(newInstrument);
+    unifiedAudioService.setInstrument(newInstrument);
   };
   
   const handleStopChord = () => {
-    audioService.stopAll();
+    unifiedAudioService.stopAll();
     setIsPlaying(false);
   };
   
