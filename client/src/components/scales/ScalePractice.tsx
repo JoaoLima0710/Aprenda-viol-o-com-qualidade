@@ -145,11 +145,29 @@ export function ScalePractice({ scale, onComplete }: ScalePracticeProps) {
       // Avançar para próxima nota
       if (currentNoteIndex < practiceNotes.length - 1) {
         setCurrentNoteIndex(prev => prev + 1);
-        toast.success(`Correto! ${expectedNote}`, { duration: 500 });
+        toast.success(`✅ Correto! ${expectedNote}`, { 
+          duration: 800,
+          style: {
+            background: '#10b981',
+            color: 'white',
+            fontSize: '18px',
+            fontWeight: 'bold',
+          }
+        });
       } else {
         // Completou a escala
         completePractice();
       }
+    } else {
+      // Nota errada - dar feedback mas não contar como tentativa
+      toast.error(`❌ Esperado: ${expectedNote}, Tocado: ${detectedNoteClean}`, {
+        duration: 1000,
+        style: {
+          background: '#ef4444',
+          color: 'white',
+          fontSize: '16px',
+        }
+      });
     }
   };
 
@@ -194,6 +212,53 @@ export function ScalePractice({ scale, onComplete }: ScalePracticeProps) {
 
   return (
     <div className="space-y-6">
+      {/* Modo Interativo - Destaque Visual */}
+      {isPracticing && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="p-8 bg-gradient-to-br from-purple-500/20 via-pink-500/20 to-cyan-500/20 border-2 border-purple-400 rounded-3xl shadow-2xl"
+        >
+          <div className="text-center">
+            <h3 className="text-2xl font-bold text-white mb-4">🎸 Toque Esta Nota:</h3>
+            
+            {/* Nota Atual - GRANDE */}
+            <motion.div
+              key={currentNoteIndex}
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="inline-block"
+            >
+              <div className="w-40 h-40 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-[0_0_60px_rgba(6,182,212,0.6)] mb-6">
+                <span className="text-7xl font-black text-white">
+                  {practiceNotes[currentNoteIndex]}
+                </span>
+              </div>
+            </motion.div>
+
+            {/* Progresso */}
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <div className="px-6 py-3 bg-white/10 rounded-xl">
+                <p className="text-sm text-gray-400">Nota</p>
+                <p className="text-2xl font-bold text-white">{currentNoteIndex + 1} / {practiceNotes.length}</p>
+              </div>
+              <div className="px-6 py-3 bg-green-500/20 rounded-xl border border-green-400/30">
+                <p className="text-sm text-gray-400">Acertos</p>
+                <p className="text-2xl font-bold text-green-400">{correctNotes}</p>
+              </div>
+            </div>
+
+            {/* Nota Detectada */}
+            <div className="flex items-center justify-center gap-3">
+              <Volume2 className="w-6 h-6 text-purple-400 animate-pulse" />
+              <span className="text-lg text-gray-300">Detectando:</span>
+              <span className="text-2xl font-bold text-purple-400">
+                {detectedNote || '---'}
+              </span>
+            </div>
+          </div>
+        </motion.div>
+      )}
       {/* Modo de Prática */}
       <div>
         <h3 className="text-lg font-bold text-white mb-3">Modo de Prática</h3>
@@ -326,10 +391,10 @@ export function ScalePractice({ scale, onComplete }: ScalePracticeProps) {
           <Button
             onClick={startPractice}
             disabled={isPlaying}
-            className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+            className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-lg py-6 font-bold"
           >
-            <Play className="w-4 h-4 mr-2" />
-            Iniciar Prática
+            <Play className="w-5 h-5 mr-2" />
+            🎤 Modo Interativo (Microfone)
           </Button>
         ) : (
           <Button

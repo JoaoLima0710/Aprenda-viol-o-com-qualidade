@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Play, StopCircle, Volume2 } from 'lucide-react';
 import { unifiedAudioService } from '@/services/UnifiedAudioService';
@@ -20,105 +20,83 @@ interface ScaleFretboardProps {
 
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
-// Cores por intervalo
-const INTERVAL_COLORS = {
-  0: { bg: '#06b6d4', label: 'Tônica (1ª)', ring: '#0891b2' },
-  2: { bg: '#8b5cf6', label: '2ª', ring: '#7c3aed' },
-  3: { bg: '#ec4899', label: '3ª menor', ring: '#db2777' },
-  4: { bg: '#f59e0b', label: '3ª maior', ring: '#d97706' },
-  5: { bg: '#10b981', label: '4ª', ring: '#059669' },
-  7: { bg: '#3b82f6', label: '5ª', ring: '#2563eb' },
-  8: { bg: '#ef4444', label: '6ª menor', ring: '#dc2626' },
-  9: { bg: '#14b8a6', label: '6ª maior', ring: '#0d9488' },
-  10: { bg: '#f97316', label: '7ª menor', ring: '#ea580c' },
-  11: { bg: '#a855f7', label: '7ª maior', ring: '#9333ea' },
-};
+// Cores vibrantes para as notas
+const NOTE_COLORS = [
+  '#06b6d4', // cyan - tônica
+  '#8b5cf6', // purple
+  '#ec4899', // pink
+  '#f59e0b', // amber
+  '#10b981', // green
+  '#3b82f6', // blue
+  '#ef4444', // red
+  '#14b8a6', // teal
+];
 
 export function ScaleFretboard({ scale, size = 'md' }: ScaleFretboardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentNoteIndex, setCurrentNoteIndex] = useState<number | null>(null);
 
-  const dimensions = {
-    sm: { width: 700, height: 260, fretWidth: 85, stringSpacing: 32, noteRadius: 14 },
-    md: { width: 900, height: 340, fretWidth: 110, stringSpacing: 45, noteRadius: 18 },
-    lg: { width: 1100, height: 420, fretWidth: 135, stringSpacing: 56, noteRadius: 22 },
-  };
-
-  const { width, height, fretWidth, stringSpacing, noteRadius } = dimensions[size];
-  const numFrets = 7;
-  const numStrings = 6;
-  const startX = 80;
-  const startY = 60;
-
-  const stringTuning = ['E', 'B', 'G', 'D', 'A', 'E'];
-
   // Calcular notas da escala
   const rootIndex = NOTE_NAMES.indexOf(scale.root);
   const scaleNotes = scale.intervals.map(interval => {
     const noteIndex = (rootIndex + interval) % 12;
-    return { note: NOTE_NAMES[noteIndex], interval };
+    return NOTE_NAMES[noteIndex];
   });
 
-  // Gerar posições das notas no braço (padrão ascendente otimizado)
-  const notePositions: Array<{
-    string: number;
-    fret: number;
-    note: string;
-    interval: number;
-    finger: number;
-    sequence: number;
-  }> = [];
+  // Adicionar a oitava (repetir a primeira nota)
+  const fullScale = [...scaleNotes, scaleNotes[0]];
 
-  // Criar sequência ascendente (uma oitava completa)
-  let sequence = 1;
-  
-  // Começar pela tônica mais grave possível
-  for (let string = numStrings - 1; string >= 0; string--) {
-    const openStringNote = stringTuning[string];
-    const openStringIndex = NOTE_NAMES.indexOf(openStringNote);
-
-    for (let fret = 0; fret <= numFrets; fret++) {
-      const noteIndex = (openStringIndex + fret) % 12;
-      const noteName = NOTE_NAMES[noteIndex];
-      const scaleNote = scaleNotes.find(sn => sn.note === noteName);
-      
-      if (scaleNote && sequence <= scale.intervals.length + 1) {
-        let finger = 0;
-        if (fret === 0) finger = 0;
-        else if (fret === 1) finger = 1;
-        else if (fret === 2) finger = 2;
-        else if (fret === 3) finger = 3;
-        else if (fret === 4) finger = 4;
-        else finger = (fret - 1) % 4 + 1;
-
-        notePositions.push({
-          string,
-          fret,
-          note: noteName,
-          interval: scaleNote.interval,
-          finger,
-          sequence: sequence++,
-        });
-      }
+  // Definir UMA posição clara e simples da escala
+  // Padrão de 1 oitava começando na corda E grave (6ª corda)
+  const scalePattern = fullScale.map((note, index) => {
+    // Padrão mais espalhado e natural
+    // Começar na corda E grave (string 5 = 6ª corda) e subir
+    let stringIndex, fret;
+    
+    if (index === 0) {
+      stringIndex = 5; fret = 3; // E grave, 3º traste
+    } else if (index === 1) {
+      stringIndex = 5; fret = 5; // E grave, 5º traste
+    } else if (index === 2) {
+      stringIndex = 4; fret = 2; // A, 2º traste
+    } else if (index === 3) {
+      stringIndex = 4; fret = 3; // A, 3º traste
+    } else if (index === 4) {
+      stringIndex = 4; fret = 5; // A, 5º traste
+    } else if (index === 5) {
+      stringIndex = 3; fret = 2; // D, 2º traste
+    } else if (index === 6) {
+      stringIndex = 3; fret = 4; // D, 4º traste
+    } else if (index === 7) {
+      stringIndex = 3; fret = 5; // D, 5º traste (oitava)
+    } else {
+      // Fallback
+      stringIndex = 5 - Math.floor(index / 3);
+      fret = 3 + (index % 3) * 2;
     }
-  }
-
-  // Ordenar por sequência para garantir ordem correta
-  notePositions.sort((a, b) => a.sequence - b.sequence);
+    
+    return {
+      note,
+      string: stringIndex,
+      fret: fret,
+      sequence: index + 1,
+      color: NOTE_COLORS[index % NOTE_COLORS.length],
+    };
+  });
 
   // Função para tocar a escala com animação
   const playScaleSequence = async () => {
     setIsPlaying(true);
     
-    for (let i = 0; i < notePositions.length; i++) {
+    for (let i = 0; i < scalePattern.length; i++) {
       setCurrentNoteIndex(i);
-      const pos = notePositions[i];
+      const note = scalePattern[i].note;
       
       // Tocar a nota
-      await unifiedAudioService.playNote(pos.note, 0.5);
+      await unifiedAudioService.playNote(note, 0.6);
       
-      // Aguardar 500ms antes da próxima nota
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Aguardar 600ms antes da próxima nota
+      await new Promise(resolve => setTimeout(resolve, 600));
     }
     
     setCurrentNoteIndex(null);
@@ -131,16 +109,28 @@ export function ScaleFretboard({ scale, size = 'md' }: ScaleFretboardProps) {
     setCurrentNoteIndex(null);
   };
 
+  // Dimensões do diagrama
+  const fretWidth = 120;
+  const stringSpacing = 50;
+  const numFrets = 8;
+  const numStrings = 6;
+  const startX = 100;
+  const startY = 80;
+  const width = 1000;
+  const height = 500;
+
+  const stringNames = ['E', 'B', 'G', 'D', 'A', 'E'];
+
   return (
     <div className="w-full">
       {/* Título e controles */}
-      <div className="mb-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="text-center md:text-left">
-          <h3 className="text-xl font-bold text-white mb-1">
-            🎸 Como tocar {scale.name}
+          <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+            🎸 Diagrama da Escala
           </h3>
           <p className="text-sm text-gray-400">
-            Siga os números na ordem. Comece pelo 1️⃣ e vá até o final.
+            Siga as setas e números. Comece pelo <span className="text-cyan-400 font-bold">①</span> e suba o braço.
           </p>
         </div>
         
@@ -148,321 +138,325 @@ export function ScaleFretboard({ scale, size = 'md' }: ScaleFretboardProps) {
           {!isPlaying ? (
             <Button
               onClick={playScaleSequence}
-              className="bg-gradient-to-r from-[#06b6d4] to-[#0891b2] hover:from-[#0891b2] hover:to-[#06b6d4] text-white"
+              className="bg-gradient-to-r from-[#06b6d4] to-[#0891b2] hover:from-[#0891b2] hover:to-[#06b6d4] text-white font-bold px-6 py-6 text-lg"
             >
-              <Play className="w-4 h-4 mr-2" />
+              <Play className="w-5 h-5 mr-2" />
               Tocar Sequência
             </Button>
           ) : (
             <Button
               onClick={stopPlaying}
               variant="destructive"
+              className="px-6 py-6 text-lg font-bold"
             >
-              <StopCircle className="w-4 h-4 mr-2" />
+              <StopCircle className="w-5 h-5 mr-2" />
               Parar
             </Button>
           )}
         </div>
       </div>
 
-      <svg
-        width={width}
-        height={height}
-        viewBox={`0 0 ${width} ${height}`}
-        className="mx-auto drop-shadow-2xl"
-      >
-        {/* Fundo do braço */}
-        <defs>
-          <linearGradient id="fretboard-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#3d2817" />
-            <stop offset="50%" stopColor="#4a3520" />
-            <stop offset="100%" stopColor="#3d2817" />
-          </linearGradient>
-          
-          {/* Gradiente para nota ativa */}
-          <radialGradient id="active-glow">
-            <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
-          </radialGradient>
-        </defs>
+      {/* Status de reprodução */}
+      {isPlaying && currentNoteIndex !== null && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 p-4 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-400/30 rounded-xl"
+        >
+          <div className="flex items-center gap-3">
+            <Volume2 className="w-5 h-5 text-cyan-400 animate-pulse" />
+            <span className="text-white font-semibold">
+              Tocando nota {currentNoteIndex + 1} de {scalePattern.length}: 
+              <span className="ml-2 text-cyan-400 text-lg">{scalePattern[currentNoteIndex].note}</span>
+            </span>
+          </div>
+        </motion.div>
+      )}
 
-        <rect
-          x={startX}
-          y={startY - 10}
-          width={numFrets * fretWidth}
-          height={(numStrings - 1) * stringSpacing + 20}
-          fill="url(#fretboard-gradient)"
-          rx="12"
-        />
+      {/* Diagrama SVG */}
+      <div className="overflow-x-auto">
+        <svg
+          width={width}
+          height={height}
+          viewBox={`0 0 ${width} ${height}`}
+          className="mx-auto drop-shadow-2xl"
+        >
+          {/* Definições */}
+          <defs>
+            <linearGradient id="fretboard-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#3d2817" />
+              <stop offset="50%" stopColor="#4a3520" />
+              <stop offset="100%" stopColor="#3d2817" />
+            </linearGradient>
+            
+            {/* Filtro de brilho para nota ativa */}
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
 
-        {/* Marcadores de posição */}
-        <circle
-          cx={startX + 2.5 * fretWidth}
-          cy={startY + ((numStrings - 1) * stringSpacing) / 2}
-          r="8"
-          fill="#6b5544"
-          opacity="0.4"
-        />
-
-        {/* Trastes */}
-        {Array.from({ length: numFrets + 1 }).map((_, i) => (
-          <line
-            key={`fret-${i}`}
-            x1={startX + i * fretWidth}
-            y1={startY}
-            x2={startX + i * fretWidth}
-            y2={startY + (numStrings - 1) * stringSpacing}
-            stroke={i === 0 ? '#e5e7eb' : '#9ca3af'}
-            strokeWidth={i === 0 ? 5 : 3}
+          {/* Fundo do braço */}
+          <rect
+            x={startX}
+            y={startY - 20}
+            width={numFrets * fretWidth}
+            height={(numStrings - 1) * stringSpacing + 40}
+            fill="url(#fretboard-gradient)"
+            rx="16"
           />
-        ))}
 
-        {/* Números dos trastes */}
-        {Array.from({ length: numFrets }).map((_, i) => (
-          <text
-            key={`fret-num-${i}`}
-            x={startX + i * fretWidth + fretWidth / 2}
-            y={startY + (numStrings - 1) * stringSpacing + 30}
-            textAnchor="middle"
-            fill="#d1d5db"
-            fontSize={size === 'sm' ? '12' : size === 'md' ? '14' : '16'}
-            fontWeight="700"
-          >
-            {i + 1}
-          </text>
-        ))}
+          {/* Marcadores de posição (dots) */}
+          <circle
+            cx={startX + 2.5 * fretWidth}
+            cy={startY + ((numStrings - 1) * stringSpacing) / 2}
+            r="10"
+            fill="#6b5544"
+            opacity="0.3"
+          />
+          <circle
+            cx={startX + 4.5 * fretWidth}
+            cy={startY + ((numStrings - 1) * stringSpacing) / 2}
+            r="10"
+            fill="#6b5544"
+            opacity="0.3"
+          />
 
-        {/* Cordas */}
-        {Array.from({ length: numStrings }).map((_, i) => {
-          const thickness = 1.5 + (numStrings - i - 1) * 0.5;
-          return (
-            <g key={`string-${i}`}>
-              <line
-                x1={startX}
-                y1={startY + i * stringSpacing}
-                x2={startX + numFrets * fretWidth}
-                y2={startY + i * stringSpacing}
-                stroke="#d4d4d8"
-                strokeWidth={thickness}
-              />
-              <text
-                x={startX - 35}
-                y={startY + i * stringSpacing + 6}
-                textAnchor="middle"
-                fill="#f3f4f6"
-                fontSize={size === 'sm' ? '14' : size === 'md' ? '16' : '18'}
-                fontWeight="bold"
-              >
-                {stringTuning[i]}
-              </text>
-            </g>
-          );
-        })}
+          {/* Trastes */}
+          {Array.from({ length: numFrets + 1 }).map((_, i) => (
+            <line
+              key={`fret-${i}`}
+              x1={startX + i * fretWidth}
+              y1={startY}
+              x2={startX + i * fretWidth}
+              y2={startY + (numStrings - 1) * stringSpacing}
+              stroke={i === 0 ? '#e5e7eb' : '#9ca3af'}
+              strokeWidth={i === 0 ? 6 : 3}
+            />
+          ))}
 
-        {/* Setas conectando as notas */}
-        {notePositions.map((pos, idx) => {
-          if (idx === notePositions.length - 1) return null;
-          
-          const nextPos = notePositions[idx + 1];
-          const x1 = pos.fret === 0 ? startX - 25 : startX + pos.fret * fretWidth - fretWidth / 2;
-          const y1 = startY + pos.string * stringSpacing;
-          const x2 = nextPos.fret === 0 ? startX - 25 : startX + nextPos.fret * fretWidth - fretWidth / 2;
-          const y2 = startY + nextPos.string * stringSpacing;
-          
-          return (
-            <g key={`arrow-${idx}`}>
-              <line
-                x1={x1}
-                y1={y1}
-                x2={x2}
-                y2={y2}
-                stroke="#4ade80"
-                strokeWidth="2"
-                strokeDasharray="4 4"
-                opacity="0.4"
-              />
-            </g>
-          );
-        })}
+          {/* Números dos trastes */}
+          {Array.from({ length: numFrets }).map((_, i) => (
+            <text
+              key={`fret-num-${i}`}
+              x={startX + i * fretWidth + fretWidth / 2}
+              y={startY + (numStrings - 1) * stringSpacing + 40}
+              textAnchor="middle"
+              fill="#9ca3af"
+              fontSize="16"
+              fontWeight="700"
+            >
+              {i + 1}
+            </text>
+          ))}
 
-        {/* Notas da escala */}
-        {notePositions.map((pos, idx) => {
-          const x = pos.fret === 0 
-            ? startX - 25
-            : startX + pos.fret * fretWidth - fretWidth / 2;
-          const y = startY + pos.string * stringSpacing;
-          const color = INTERVAL_COLORS[pos.interval as keyof typeof INTERVAL_COLORS] || INTERVAL_COLORS[0];
-          const isRoot = pos.interval === 0;
-          const isActive = currentNoteIndex === idx;
-          const isFirst = idx === 0;
-
-          return (
-            <g key={`note-${idx}`}>
-              {/* Glow para nota ativa */}
-              {isActive && (
-                <circle
-                  cx={x}
-                  cy={y}
-                  r={noteRadius + 15}
-                  fill="url(#active-glow)"
-                >
-                  <animate
-                    attributeName="r"
-                    from={noteRadius + 10}
-                    to={noteRadius + 25}
-                    dur="0.5s"
-                    repeatCount="indefinite"
-                  />
-                </circle>
-              )}
-              
-              {/* Sombra */}
-              <circle
-                cx={x + 2}
-                cy={y + 3}
-                r={isRoot ? noteRadius + 4 : noteRadius}
-                fill="rgba(0,0,0,0.4)"
-              />
-              
-              {/* Círculo da nota */}
-              <motion.circle
-                cx={x}
-                cy={y}
-                r={isRoot ? noteRadius + 4 : noteRadius}
-                fill={color.bg}
-                stroke={isRoot ? '#ffffff' : isActive ? '#fbbf24' : color.ring}
-                strokeWidth={isRoot ? 4 : isActive ? 5 : 3}
-                initial={{ scale: 0 }}
-                animate={{ scale: isActive ? 1.3 : 1 }}
-                transition={{ type: 'spring', stiffness: 200 }}
-              />
-              
-              {/* Nome da nota */}
-              <text
-                x={x}
-                y={y + 1}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill="#fff"
-                fontSize={size === 'sm' ? '11' : size === 'md' ? '13' : '15'}
-                fontWeight="bold"
-              >
-                {pos.note}
-              </text>
-              
-              {/* Número da sequência (GRANDE e destacado) */}
-              <g>
-                <circle
-                  cx={x + noteRadius + 8}
-                  cy={y - noteRadius - 8}
-                  r="14"
-                  fill={isFirst ? '#10b981' : '#1a1a2e'}
-                  stroke={isFirst ? '#ffffff' : color.bg}
-                  strokeWidth="2"
+          {/* Cordas */}
+          {Array.from({ length: numStrings }).map((_, i) => {
+            const thickness = 2 + (numStrings - i - 1) * 0.6;
+            return (
+              <g key={`string-${i}`}>
+                <line
+                  x1={startX}
+                  y1={startY + i * stringSpacing}
+                  x2={startX + numFrets * fretWidth}
+                  y2={startY + i * stringSpacing}
+                  stroke="#d4d4d8"
+                  strokeWidth={thickness}
                 />
                 <text
-                  x={x + noteRadius + 8}
-                  y={y - noteRadius - 8 + 1}
+                  x={startX - 45}
+                  y={startY + i * stringSpacing + 7}
                   textAnchor="middle"
-                  dominantBaseline="middle"
-                  fill={isFirst ? '#ffffff' : color.bg}
-                  fontSize={size === 'sm' ? '12' : size === 'md' ? '14' : '16'}
-                  fontWeight="bold"
+                  fill="#d1d5db"
+                  fontSize="18"
+                  fontWeight="700"
                 >
-                  {pos.sequence}
+                  {stringNames[i]}
                 </text>
               </g>
-              
-              {/* Indicador "COMECE AQUI" */}
-              {isFirst && (
+            );
+          })}
+
+          {/* Setas conectando as notas */}
+          {scalePattern.slice(0, -1).map((note, index) => {
+            const nextNote = scalePattern[index + 1];
+            const x1 = startX + (note.fret - 0.5) * fretWidth;
+            const y1 = startY + note.string * stringSpacing;
+            const x2 = startX + (nextNote.fret - 0.5) * fretWidth;
+            const y2 = startY + nextNote.string * stringSpacing;
+
+            // Calcular ponto médio para a seta
+            const midX = (x1 + x2) / 2;
+            const midY = (y1 + y2) / 2;
+
+            // Calcular ângulo da seta
+            const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI);
+
+            const isActive = isPlaying && currentNoteIndex === index;
+
+            return (
+              <g key={`arrow-${index}`}>
+                {/* Linha conectando */}
+                <line
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  stroke={isActive ? '#fbbf24' : '#10b981'}
+                  strokeWidth={isActive ? 5 : 3}
+                  strokeDasharray={isActive ? '0' : '8,4'}
+                  opacity={isActive ? 1 : 0.6}
+                  style={{ transition: 'all 0.3s' }}
+                />
+                
+                {/* Cabeça da seta */}
+                <polygon
+                  points="0,-6 12,0 0,6"
+                  fill={isActive ? '#fbbf24' : '#10b981'}
+                  opacity={isActive ? 1 : 0.6}
+                  transform={`translate(${midX}, ${midY}) rotate(${angle})`}
+                  style={{ transition: 'all 0.3s' }}
+                />
+              </g>
+            );
+          })}
+
+          {/* Notas da escala */}
+          {scalePattern.map((note, index) => {
+            const x = startX + (note.fret - 0.5) * fretWidth;
+            const y = startY + note.string * stringSpacing;
+            const isActive = isPlaying && currentNoteIndex === index;
+            const isFirst = index === 0;
+
+            return (
+              <g key={`note-${index}`}>
+                {/* Círculo da nota */}
+                <motion.circle
+                  cx={x}
+                  cy={y}
+                  r={isActive ? 32 : 28}
+                  fill={isActive ? '#fbbf24' : note.color}
+                  stroke={isFirst ? '#10b981' : '#ffffff'}
+                  strokeWidth={isFirst ? 5 : 3}
+                  filter={isActive ? 'url(#glow)' : undefined}
+                  style={{ transition: 'all 0.3s' }}
+                />
+
+                {/* Número de sequência */}
                 <text
                   x={x}
-                  y={y - noteRadius - 35}
+                  y={y + 8}
                   textAnchor="middle"
-                  fill="#10b981"
-                  fontSize={size === 'sm' ? '10' : size === 'md' ? '12' : '14'}
-                  fontWeight="bold"
+                  fill="white"
+                  fontSize={isActive ? '26' : '22'}
+                  fontWeight="900"
+                  style={{ 
+                    textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                    transition: 'all 0.3s'
+                  }}
                 >
-                  ▼ COMECE AQUI
+                  {note.sequence}
                 </text>
-              )}
-              
-              {/* Número do dedo */}
-              {pos.finger > 0 && (
-                <g>
-                  <circle
-                    cx={x}
-                    cy={y + noteRadius + 18}
-                    r="11"
-                    fill="#1a1a2e"
-                    stroke={color.bg}
-                    strokeWidth="2"
-                  />
-                  <text
-                    x={x}
-                    y={y + noteRadius + 19}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill={color.bg}
-                    fontSize={size === 'sm' ? '10' : size === 'md' ? '12' : '14'}
-                    fontWeight="bold"
-                  >
-                    {pos.finger}
-                  </text>
-                </g>
-              )}
-            </g>
-          );
-        })}
-      </svg>
 
-      {/* Legenda melhorada */}
-      <div className="mt-6 p-5 rounded-xl bg-gradient-to-br from-[#1a1a2e]/80 to-[#2a2a3e]/60 border border-white/20 shadow-xl">
-        <h4 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+                {/* Nome da nota abaixo */}
+                <text
+                  x={x}
+                  y={y + 50}
+                  textAnchor="middle"
+                  fill={isActive ? '#fbbf24' : note.color}
+                  fontSize="16"
+                  fontWeight="700"
+                >
+                  {note.note}
+                </text>
+
+                {/* Indicador "COMECE AQUI" para a primeira nota */}
+                {isFirst && (
+                  <g>
+                    <rect
+                      x={x - 70}
+                      y={y - 60}
+                      width="140"
+                      height="35"
+                      fill="#10b981"
+                      rx="8"
+                    />
+                    <text
+                      x={x}
+                      y={y - 35}
+                      textAnchor="middle"
+                      fill="white"
+                      fontSize="16"
+                      fontWeight="900"
+                    >
+                      ⬇️ COMECE AQUI
+                    </text>
+                  </g>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+
+      {/* Legenda educacional */}
+      <div className="mt-8 p-6 bg-gradient-to-br from-[#1a1a2e]/80 to-[#2a2a3e]/60 border border-white/20 rounded-2xl">
+        <h4 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
           <span>📖</span>
-          <span>Como ler o diagrama</span>
+          <span>Como Ler Este Diagrama</span>
         </h4>
         
-        <div className="space-y-3">
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-[#10b981]/10 border border-[#10b981]/30">
-            <span className="text-2xl">1️⃣</span>
+        <div className="grid md:grid-cols-2 gap-4 text-sm">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-cyan-500 flex items-center justify-center text-white font-bold">
+              1
+            </div>
             <div>
-              <p className="text-sm font-bold text-[#10b981] mb-1">Siga os números na ordem</p>
-              <p className="text-xs text-gray-300">
-                Os números grandes mostram a sequência. Comece no 1 e vá até o último número.
-              </p>
+              <p className="text-white font-semibold mb-1">Comece pela primeira nota</p>
+              <p className="text-gray-400">Procure o círculo com o número ① e o texto "COMECE AQUI"</p>
             </div>
           </div>
-          
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-[#4ade80]/10 border border-[#4ade80]/30">
-            <span className="text-2xl">➡️</span>
+
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white font-bold">
+              2
+            </div>
             <div>
-              <p className="text-sm font-bold text-[#4ade80] mb-1">Linhas pontilhadas mostram o caminho</p>
-              <p className="text-xs text-gray-300">
-                As setas verdes conectam uma nota à próxima. Siga o caminho!
-              </p>
+              <p className="text-white font-semibold mb-1">Siga as setas verdes</p>
+              <p className="text-gray-400">As setas mostram o caminho exato de uma nota para a próxima</p>
             </div>
           </div>
-          
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-[#06b6d4]/10 border border-[#06b6d4]/30">
-            <span className="text-2xl">👆</span>
+
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-pink-500 flex items-center justify-center text-white font-bold">
+              3
+            </div>
             <div>
-              <p className="text-sm font-bold text-[#06b6d4] mb-1">Números pequenos = dedos</p>
-              <p className="text-xs text-gray-300">
-                1=indicador, 2=médio, 3=anelar, 4=mínimo. Use o dedo indicado!
-              </p>
+              <p className="text-white font-semibold mb-1">Toque na ordem dos números</p>
+              <p className="text-gray-400">① → ② → ③ → ④... até completar a escala</p>
             </div>
           </div>
-          
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-[#f59e0b]/10 border border-[#f59e0b]/30">
-            <span className="text-2xl">🔊</span>
+
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold">
+              4
+            </div>
             <div>
-              <p className="text-sm font-bold text-[#f59e0b] mb-1">Clique em "Tocar Sequência"</p>
-              <p className="text-xs text-gray-300">
-                Ouça como a escala soa! A nota atual fica destacada em amarelo.
-              </p>
+              <p className="text-white font-semibold mb-1">Use o botão "Tocar Sequência"</p>
+              <p className="text-gray-400">Ouça como deve soar e veja as notas acenderem em amarelo</p>
             </div>
           </div>
+        </div>
+
+        {/* Dica extra */}
+        <div className="mt-6 p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-400/30 rounded-xl">
+          <p className="text-sm text-gray-300">
+            <span className="text-green-400 font-bold">💡 Dica:</span> As letras à esquerda (E, B, G, D, A, E) são os nomes das cordas. 
+            Os números embaixo (1, 2, 3...) são os trastes do violão.
+          </p>
         </div>
       </div>
     </div>
