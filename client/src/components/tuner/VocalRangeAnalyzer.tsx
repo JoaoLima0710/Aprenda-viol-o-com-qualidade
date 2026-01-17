@@ -32,9 +32,13 @@ export function VocalRangeAnalyzer() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const animationRef = useRef<number | undefined>(undefined);
+  const isRecordingRef = useRef(false);
+  const phaseRef = useRef<'idle' | 'lowest' | 'highest' | 'complete'>('idle');
   
   const [isActive, setIsActive] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  
   const [currentNote, setCurrentNote] = useState<{ note: string; freq: number; octave: number } | null>(null);
   const [lowestDetected, setLowestDetected] = useState<{ note: string; freq: number; octave: number } | null>(null);
   const [highestDetected, setHighestDetected] = useState<{ note: string; freq: number; octave: number } | null>(null);
@@ -43,6 +47,15 @@ export function VocalRangeAnalyzer() {
   const [recommendedSongs, setRecommendedSongs] = useState<SongRecommendation[]>([]);
   const [error, setError] = useState('');
   const [phase, setPhase] = useState<'idle' | 'lowest' | 'highest' | 'complete'>('idle');
+  
+  // Sincronizar refs com state
+  useEffect(() => {
+    isRecordingRef.current = isRecording;
+  }, [isRecording]);
+  
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
 
   const startAnalyzer = async () => {
     try {
@@ -109,16 +122,16 @@ export function VocalRangeAnalyzer() {
       
       const frequency = autoCorrelate(buffer, audioContextRef.current!.sampleRate);
       
-      if (frequency > 0 && isRecording) {
+      if (frequency > 0 && isRecordingRef.current) {
         const noteInfo = frequencyToNote(frequency);
         setCurrentNote(noteInfo);
         
         // Update lowest/highest during recording
-        if (phase === 'lowest') {
+        if (phaseRef.current === 'lowest') {
           if (!lowestDetected || frequency < lowestDetected.freq) {
             setLowestDetected(noteInfo);
           }
-        } else if (phase === 'highest') {
+        } else if (phaseRef.current === 'highest') {
           if (!highestDetected || frequency > highestDetected.freq) {
             setHighestDetected(noteInfo);
           }
