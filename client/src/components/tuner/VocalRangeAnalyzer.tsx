@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'wouter';
 import { VocalCompatibilityService, SongRecommendation } from '@/services/VocalCompatibilityService';
 import { songs } from '@/data/songs';
+import { FrequencySpectrum } from './FrequencySpectrum';
+import { VocalExercises } from './VocalExercises';
 
 interface VocalRange {
   lowestNote: string;
@@ -376,9 +378,14 @@ export function VocalRangeAnalyzer() {
               exit={{ opacity: 0, x: 20 }}
               className="py-8"
             >
-              <div className="text-center mb-6">
+              <div className="text-center mb-8">
                 <h4 className="text-2xl font-bold text-white mb-2">Nota Mais Grave</h4>
                 <p className="text-gray-400">Cante a nota mais grave que você consegue</p>
+              </div>
+              
+              {/* Visualização de Espectro */}
+              <div className="mb-6">
+                <FrequencySpectrum analyser={analyserRef.current} isActive={isActive} />
               </div>
 
               <div className="text-center mb-6">
@@ -445,6 +452,11 @@ export function VocalRangeAnalyzer() {
               <div className="text-center mb-6">
                 <h4 className="text-2xl font-bold text-white mb-2">Nota Mais Aguda</h4>
                 <p className="text-gray-400">Cante a nota mais aguda que você consegue</p>
+              </div>
+              
+              {/* Visualização de Espectro */}
+              <div className="mb-6">
+                <FrequencySpectrum analyser={analyserRef.current} isActive={isActive} />
               </div>
 
               <div className="text-center mb-6">
@@ -577,6 +589,19 @@ export function VocalRangeAnalyzer() {
                   </div>
                 </div>
               )}
+              
+              {/* Vocal Exercises */}
+              <div className="mt-8 pt-8 border-t border-white/10">
+                <VocalExercises 
+                  vocalRange={{
+                    lowestNote: vocalRange.lowestNote,
+                    highestNote: vocalRange.highestNote,
+                    lowestFreq: vocalRange.lowestFreq,
+                    highestFreq: vocalRange.highestFreq,
+                  }}
+                  analyser={analyserRef.current}
+                />
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
