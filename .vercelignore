@@ -1,0 +1,28 @@
+# Ignore server files (web-static project)
+server/
+
+# Ignore development files
+node_modules/
+.git/
+.github/
+*.log
+.DS_Store
+
+# Ignore build artifacts
+dist/
+.vite/
+.turbo/
+
+# Ignore local config
+.env.local
+.env.*.local
+
+# Ignore documentation
+*.md
+!README.md
+
+# Ignore test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
