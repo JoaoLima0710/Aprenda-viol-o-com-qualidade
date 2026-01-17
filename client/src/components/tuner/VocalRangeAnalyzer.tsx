@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Play, RotateCcw, Music2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
+import { VocalCompatibilityService, SongRecommendation } from '@/services/VocalCompatibilityService';
+import { songs } from '@/data/songs';
 
 interface VocalRange {
   lowestNote: string;
@@ -37,7 +39,8 @@ export function VocalRangeAnalyzer() {
   const [lowestDetected, setLowestDetected] = useState<{ note: string; freq: number; octave: number } | null>(null);
   const [highestDetected, setHighestDetected] = useState<{ note: string; freq: number; octave: number } | null>(null);
   const [vocalRange, setVocalRange] = useState<VocalRange | null>(null);
-  const [recommendedSongs, setRecommendedSongs] = useState<RecommendedSong[]>([]);
+  const [, navigate] = useLocation();
+  const [recommendedSongs, setRecommendedSongs] = useState<SongRecommendation[]>([]);
   const [error, setError] = useState('');
   const [phase, setPhase] = useState<'idle' | 'lowest' | 'highest' | 'complete'>('idle');
 
@@ -236,18 +239,20 @@ export function VocalRangeAnalyzer() {
   };
 
   const recommendSongs = (range: VocalRange) => {
-    // Simulação de recomendações (em produção, viria do banco de dados)
-    const songs: RecommendedSong[] = [
-      { id: '1', title: 'Garota de Ipanema', artist: 'Tom Jobim', lowestNote: 'C3', highestNote: 'E4', compatibility: 95 },
-      { id: '2', title: 'Chega de Saudade', artist: 'João Gilberto', lowestNote: 'D3', highestNote: 'F4', compatibility: 92 },
-      { id: '3', title: 'Águas de Março', artist: 'Elis Regina', lowestNote: 'A2', highestNote: 'D4', compatibility: 88 },
-      { id: '4', title: 'Eu Sei Que Vou Te Amar', artist: 'Tom Jobim', lowestNote: 'C3', highestNote: 'G4', compatibility: 85 },
-      { id: '5', title: 'Wave', artist: 'Tom Jobim', lowestNote: 'B2', highestNote: 'E4', compatibility: 90 },
-    ];
+    // Usar serviço real de compatibilidade vocal
+    const userRange = {
+      lowestNote: range.lowestNote,
+      highestNote: range.highestNote,
+      rangeInSemitones: range.rangeInSemitones,
+    };
 
-    // Filtrar por compatibilidade (simplificado)
-    const compatible = songs.filter(song => song.compatibility >= 80);
-    setRecommendedSongs(compatible);
+    const recommendations = VocalCompatibilityService.getRecommendations(
+      userRange,
+      songs,
+      5 // Top 5 músicas mais compatíveis
+    );
+
+    setRecommendedSongs(recommendations);
   };
 
   const reset = () => {
@@ -507,20 +512,21 @@ export function VocalRangeAnalyzer() {
                     Músicas Recomendadas para Você
                   </h5>
                   <div className="space-y-3">
-                    {recommendedSongs.map((song) => (
-                      <Link key={song.id} href={`/songs/${song.id}`}>
+                    {recommendedSongs.map((rec) => (
+                      <Link key={rec.song.id} href={`/songs/${rec.song.id}`}>
                         <div className="p-4 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 hover:border-cyan-400/50 transition-all cursor-pointer">
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="font-bold text-white">{song.title}</p>
-                              <p className="text-sm text-gray-400">{song.artist}</p>
+                              <p className="font-bold text-white">{rec.song.title}</p>
+                              <p className="text-sm text-gray-400">{rec.song.artist}</p>
                               <p className="text-xs text-gray-500 mt-1">
-                                Extensão: {song.lowestNote} - {song.highestNote}
+                                Extensão: {rec.song.vocalRange?.lowestNote} - {rec.song.vocalRange?.highestNote}
                               </p>
+                              <p className="text-xs text-cyan-400 mt-1">{rec.reason}</p>
                             </div>
                             <div className="text-right">
                               <div className="text-2xl font-bold text-green-400">
-                                {song.compatibility}%
+                                {rec.compatibility}%
                               </div>
                               <p className="text-xs text-gray-400">compatível</p>
                             </div>

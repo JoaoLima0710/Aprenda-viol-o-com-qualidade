@@ -13,6 +13,11 @@ export interface Song {
   spotifyUrl?: string;
   description: string;
   tips: string[];
+  vocalRange?: {
+    lowestNote: string;  // Ex: "C3"
+    highestNote: string; // Ex: "G4"
+    rangeInSemitones: number;
+  };
 }
 
 export const songs: Song[] = [
@@ -37,6 +42,11 @@ Por [D]que tamanha judi[G]ação`,
       'Acentue os tempos fortes',
       'Pratique a transição G-C-D',
     ],
+    vocalRange: {
+      lowestNote: 'D3',
+      highestNote: 'A4',
+      rangeInSemitones: 19,
+    },
   },
   {
     id: 'trem-das-onze',
@@ -59,6 +69,11 @@ Que [E7]sai agora às onze [Am]horas
       'Mantenha o tempo constante',
       'Destaque o baixo nos acordes',
     ],
+    vocalRange: {
+      lowestNote: 'C3',
+      highestNote: 'F4',
+      rangeInSemitones: 17,
+    },
   },
   
   // Bossa Nova - Iniciante
@@ -82,6 +97,11 @@ Num doce ba[Gb7]lanço a caminho do [Fmaj7]mar`,
       'Suavize as batidas',
       'Pratique os acordes com sétima separadamente',
     ],
+    vocalRange: {
+      lowestNote: 'C3',
+      highestNote: 'E4',
+      rangeInSemitones: 16,
+    },
   },
   {
     id: 'chega-de-saudade',
