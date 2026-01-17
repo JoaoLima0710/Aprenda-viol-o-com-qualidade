@@ -234,6 +234,16 @@ export default function Home() {
         />
         
         <main className="px-5 py-5 space-y-6 pb-24">
+          {/* Daily Training */}
+          <section>
+            <DailyTraining />
+          </section>
+          
+          {/* AI Assistant */}
+          <section>
+            <AIAssistant />
+          </section>
+          
           <section>
             <DailyGoalCard current={15} total={30} streak={currentStreak} />
           </section>
