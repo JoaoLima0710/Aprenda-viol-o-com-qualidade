@@ -10,6 +10,7 @@ import { ChallengeCard } from '@/components/gamification/ChallengeCard';
 import { ContinueLearning } from '@/components/gamification/ContinueLearning';
 import { TrainingModule } from '@/components/gamification/TrainingModule';
 import { AIAssistant } from '@/components/ai/AIAssistant';
+import { DailyTraining } from '@/components/training/DailyTraining';
 import { Button } from '@/components/ui/button';
 import { useGamificationStore } from '@/stores/useGamificationStore';
 
@@ -122,6 +123,11 @@ export default function Home() {
                 <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#a855f7] rounded-full border-2 border-[#0f0f1a] shadow-[0_0_10px_rgba(168,85,247,0.8)]"></span>
               </Button>
             </header>
+            
+            {/* Daily Training */}
+            <section>
+              <DailyTraining />
+            </section>
             
             {/* AI Assistant */}
             <section>
