@@ -6,6 +6,7 @@ import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
 import { Metronome } from '@/components/practice/Metronome';
 import { PitchDetector } from '@/components/practice/PitchDetector';
 import { SpectrumVisualizer } from '@/components/practice/SpectrumVisualizer';
+import { EarTraining } from '@/components/practice/EarTraining';
 import { useGamificationStore } from '@/stores/useGamificationStore';
 import { Clock } from 'lucide-react';
 
@@ -38,6 +39,12 @@ export default function Practice() {
               </div>
               <p className="text-gray-400">Metrônomo e outras ferramentas para melhorar sua prática</p>
             </header>
+            
+            {/* Ear Training */}
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-4">🎵 Treino de Ouvido</h2>
+              <EarTraining />
+            </div>
             
             {/* Metronome */}
             <div>
@@ -132,6 +139,11 @@ export default function Practice() {
             </div>
             <p className="text-sm text-gray-400">Ferramentas para melhorar</p>
           </header>
+          
+          <div>
+            <h2 className="text-lg font-bold text-white mb-3">🎵 Treino de Ouvido</h2>
+            <EarTraining />
+          </div>
           
           <div>
             <h2 className="text-lg font-bold text-white mb-3">Metrônomo</h2>

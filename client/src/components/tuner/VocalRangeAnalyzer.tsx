@@ -183,7 +183,10 @@ export function VocalRangeAnalyzer() {
     return { note, freq: frequency, octave };
   };
 
-  const startLowestTest = () => {
+  const startLowestTest = async () => {
+    if (!isActive) {
+      await startAnalyzer();
+    }
     setPhase('lowest');
     setIsRecording(true);
     setLowestDetected(null);
@@ -343,12 +346,12 @@ export function VocalRangeAnalyzer() {
               </p>
               <Button
                 onClick={startLowestTest}
-                disabled={!isActive}
-                className="bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white"
+                className="bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white text-lg px-8 py-6"
               >
-                <Play className="w-4 h-4 mr-2" />
+                <Play className="w-5 h-5 mr-2" />
                 Começar Teste
               </Button>
+              <p className="text-xs text-gray-500 mt-4">O microfone será ativado automaticamente</p>
             </motion.div>
           )}
 
@@ -365,16 +368,28 @@ export function VocalRangeAnalyzer() {
                 <p className="text-gray-400">Cante a nota mais grave que você consegue</p>
               </div>
 
-              {currentNote && (
-                <div className="text-center mb-6">
-                  <div className="text-6xl font-bold text-cyan-400 mb-2">
-                    {currentNote.note}{currentNote.octave}
+              <div className="text-center mb-6">
+                {currentNote ? (
+                  <>
+                    <div className="text-8xl font-bold text-cyan-400 mb-2 animate-pulse">
+                      {currentNote.note}{currentNote.octave}
+                    </div>
+                    <div className="text-2xl text-gray-300">
+                      {currentNote.freq.toFixed(2)} Hz
+                    </div>
+                    {isRecording && (
+                      <div className="mt-4 flex items-center justify-center gap-2">
+                        <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                        <span className="text-red-400 font-semibold">GRAVANDO...</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-4xl text-gray-500 mb-2">
+                    Aguardando voz...
                   </div>
-                  <div className="text-xl text-gray-300">
-                    {currentNote.freq.toFixed(2)} Hz
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {lowestDetected && (
                 <div className="text-center mb-6 p-4 bg-cyan-500/10 border border-cyan-500/30 rounded-lg">
@@ -419,16 +434,28 @@ export function VocalRangeAnalyzer() {
                 <p className="text-gray-400">Cante a nota mais aguda que você consegue</p>
               </div>
 
-              {currentNote && (
-                <div className="text-center mb-6">
-                  <div className="text-6xl font-bold text-orange-400 mb-2">
-                    {currentNote.note}{currentNote.octave}
+              <div className="text-center mb-6">
+                {currentNote ? (
+                  <>
+                    <div className="text-8xl font-bold text-orange-400 mb-2 animate-pulse">
+                      {currentNote.note}{currentNote.octave}
+                    </div>
+                    <div className="text-2xl text-gray-300">
+                      {currentNote.freq.toFixed(2)} Hz
+                    </div>
+                    {isRecording && (
+                      <div className="mt-4 flex items-center justify-center gap-2">
+                        <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                        <span className="text-red-400 font-semibold">GRAVANDO...</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-4xl text-gray-500 mb-2">
+                    Aguardando voz...
                   </div>
-                  <div className="text-xl text-gray-300">
-                    {currentNote.freq.toFixed(2)} Hz
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {highestDetected && (
                 <div className="text-center mb-6 p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">

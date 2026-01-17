@@ -35,7 +35,9 @@ export const songs: Song[] = [
     chordSheet: `[G]Quando olhei a terra ar[C]dendo
 Qual fo[D]gueira de São [G]João
 Eu per[G]guntei a Deus do [C]céu, ai
-Por [D]que tamanha judi[G]ação`,
+Por [D]que tamanha judi[G]ação
+
+[Link para cifra completa: cifraclub.com.br]`,
     description: 'Clássico do forró nordestino, perfeito para iniciantes',
     tips: [
       'Ritmo de baião: baixo-cima-baixo-cima',
