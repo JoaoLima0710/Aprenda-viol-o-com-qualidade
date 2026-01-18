@@ -1,4 +1,4 @@
-import { X, Home, Guitar, Music2, Trophy, Target, User, Flame, Music, Clock } from 'lucide-react';
+import { X, Home, Guitar, Music2, Trophy, Target, User, Flame, Music, Clock, Mic2, BookOpen, Settings } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -29,10 +29,13 @@ export function MobileSidebar({
     { path: '/chords', label: 'Acordes', icon: Guitar },
     { path: '/scales', label: 'Escalas', icon: Music2 },
     { path: '/songs', label: 'Músicas', icon: Music },
+    { path: '/tuner', label: 'Afinador', icon: Mic2 },
     { path: '/practice', label: 'Prática', icon: Clock },
+    { path: '/theory', label: 'Teoria Musical', icon: BookOpen },
     { path: '/missions', label: 'Missões', icon: Target },
     { path: '/achievements', label: 'Conquistas', icon: Trophy },
     { path: '/profile', label: 'Perfil', icon: User },
+    { path: '/settings', label: 'Configurações', icon: Settings },
   ];
   
   const xpPercentage = (currentXP / xpToNextLevel) * 100;
