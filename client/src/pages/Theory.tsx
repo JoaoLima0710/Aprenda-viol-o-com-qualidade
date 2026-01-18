@@ -7,6 +7,14 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useGamificationStore } from '@/stores/useGamificationStore';
 import { Book, Music, Activity, Target, Waves, TrendingUp, Play, CheckCircle2 } from 'lucide-react';
+import { TheoryQuiz } from '@/components/theory/TheoryQuiz';
+
+interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation: string;
+}
 
 interface TheoryModule {
   id: string;
@@ -17,6 +25,7 @@ interface TheoryModule {
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   topics: string[];
   content: React.ReactNode;
+  quiz?: QuizQuestion[];
 }
 
 const THEORY_MODULES: TheoryModule[] = [
@@ -178,11 +187,327 @@ const THEORY_MODULES: TheoryModule[] = [
       </div>
     ),
   },
+  
+  {
+    id: 'intervals',
+    title: 'Intervalos Musicais',
+    icon: TrendingUp,
+    description: 'Entenda a distância entre notas e como elas criam diferentes sensações',
+    duration: '20 min',
+    difficulty: 'intermediate',
+    topics: ['Intervalos maiores', 'Intervalos menores', 'Intervalos justos', 'Aplicação prática'],
+    content: (
+      <div className="space-y-6">
+        <div className="p-6 rounded-xl bg-gradient-to-br from-[#1a1a2e] to-[#16213e] border border-white/10">
+          <h3 className="text-2xl font-bold text-white mb-4">O que são Intervalos?</h3>
+          <p className="text-gray-300 mb-6">
+            Intervalos são a <span className="text-[#06b6d4] font-semibold">distância entre duas notas</span>. 
+            Eles são a base de tudo na música: melodias, acordes, harmonias e escalas.
+          </p>
+
+          <div className="space-y-4">
+            <div className="p-5 rounded-lg bg-gradient-to-r from-[#10b981]/20 to-transparent border-l-4 border-[#10b981]">
+              <h4 className="text-xl font-bold text-white mb-3">🎵 Intervalos Principais</h4>
+              <div className="space-y-3">
+                <div className="p-3 rounded bg-white/5">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-white">Segunda Menor</span>
+                    <span className="text-sm text-gray-400">1 semitom</span>
+                  </div>
+                  <p className="text-sm text-gray-300">Som tenso, como em "Tubarão" (dó-dó#)</p>
+                </div>
+                
+                <div className="p-3 rounded bg-white/5">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-white">Terça Maior</span>
+                    <span className="text-sm text-gray-400">4 semitons</span>
+                  </div>
+                  <p className="text-sm text-gray-300">Som alegre, base dos acordes maiores</p>
+                </div>
+                
+                <div className="p-3 rounded bg-white/5">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-white">Quinta Justa</span>
+                    <span className="text-sm text-gray-400">7 semitons</span>
+                  </div>
+                  <p className="text-sm text-gray-300">Som estável e poderoso, usado em power chords</p>
+                </div>
+                
+                <div className="p-3 rounded bg-white/5">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-white">Oitava</span>
+                    <span className="text-sm text-gray-400">12 semitons</span>
+                  </div>
+                  <p className="text-sm text-gray-300">Mesma nota, só que mais aguda ou grave</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-lg bg-[#8b5cf6]/10 border border-[#8b5cf6]/30">
+              <h4 className="text-lg font-bold text-white mb-3">🎯 Dica de Memorização</h4>
+              <p className="text-gray-300">
+                Associe intervalos com músicas famosas! Exemplo: <span className="font-semibold">Quinta Justa</span> = 
+                início de "Parabéns pra Você" (Pa-ra-béns)
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
+    quiz: [
+      {
+        question: 'Quantos semitons tem uma Terça Maior?',
+        options: ['2 semitons', '3 semitons', '4 semitons', '5 semitons'],
+        correctAnswer: 2,
+        explanation: 'A Terça Maior tem 4 semitons. Por exemplo, de Dó (C) até Mi (E) = 4 semitons.'
+      },
+      {
+        question: 'Qual intervalo é conhecido como "power chord" no rock?',
+        options: ['Terça Maior', 'Quinta Justa', 'Oitava', 'Segunda Menor'],
+        correctAnswer: 1,
+        explanation: 'A Quinta Justa (7 semitons) é a base dos power chords, muito usados no rock. Tem som poderoso e estável.'
+      },
+      {
+        question: 'Qual intervalo cria uma sensação de tensão, como no tema de "Tubarão"?',
+        options: ['Oitava', 'Quinta Justa', 'Segunda Menor', 'Terça Maior'],
+        correctAnswer: 2,
+        explanation: 'A Segunda Menor (1 semitom) cria tensão. O tema de "Tubarão" usa esse intervalo (dó-dó#) para criar suspense.'
+      },
+      {
+        question: 'Quantos semitons separam uma nota de sua oitava?',
+        options: ['7 semitons', '10 semitons', '12 semitons', '14 semitons'],
+        correctAnswer: 2,
+        explanation: 'Uma oitava tem 12 semitons. É a mesma nota, só que mais aguda ou grave.'
+      },
+      {
+        question: 'Qual intervalo forma a base dos acordes maiores?',
+        options: ['Segunda Maior', 'Terça Maior', 'Quinta Justa', 'Sétima Maior'],
+        correctAnswer: 1,
+        explanation: 'A Terça Maior (4 semitons) é fundamental nos acordes maiores, dando o som "alegre" característico.'
+      }
+    ],
+  },
+  
+  {
+    id: 'scales',
+    title: 'Escalas Musicais',
+    icon: Music,
+    description: 'Aprenda como as escalas são construídas e como usá-las',
+    duration: '25 min',
+    difficulty: 'intermediate',
+    topics: ['Escala maior', 'Escala menor', 'Pentatônica', 'Modos gregos'],
+    content: (
+      <div className="space-y-6">
+        <div className="p-6 rounded-xl bg-gradient-to-br from-[#1a1a2e] to-[#16213e] border border-white/10">
+          <h3 className="text-2xl font-bold text-white mb-4">O que são Escalas?</h3>
+          <p className="text-gray-300 mb-6">
+            Escalas são <span className="text-[#06b6d4] font-semibold">sequências de notas organizadas</span> que servem 
+            como "alfabeto" da música. Elas definem quais notas "combinam" em uma música.
+          </p>
+
+          <div className="space-y-4">
+            <div className="p-5 rounded-lg bg-gradient-to-r from-[#06b6d4]/20 to-transparent border-l-4 border-[#06b6d4]">
+              <h4 className="text-xl font-bold text-white mb-3">🎶 Escala Maior</h4>
+              <p className="text-gray-300 mb-3">
+                A escala mais comum! Som <span className="text-[#06b6d4] font-semibold">alegre e brilhante</span>.
+              </p>
+              <div className="p-3 rounded bg-[#06b6d4]/10">
+                <p className="text-sm text-gray-300 mb-2">
+                  <span className="font-semibold">Fórmula:</span> Tom - Tom - Semitom - Tom - Tom - Tom - Semitom
+                </p>
+                <p className="text-sm text-gray-300">
+                  <span className="font-semibold">Exemplo (Dó Maior):</span> C - D - E - F - G - A - B - C
+                </p>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-lg bg-gradient-to-r from-[#8b5cf6]/20 to-transparent border-l-4 border-[#8b5cf6]">
+              <h4 className="text-xl font-bold text-white mb-3">🎶 Escala Menor Natural</h4>
+              <p className="text-gray-300 mb-3">
+                Som <span className="text-[#8b5cf6] font-semibold">melancólico e introspectivo</span>.
+              </p>
+              <div className="p-3 rounded bg-[#8b5cf6]/10">
+                <p className="text-sm text-gray-300 mb-2">
+                  <span className="font-semibold">Fórmula:</span> Tom - Semitom - Tom - Tom - Semitom - Tom - Tom
+                </p>
+                <p className="text-sm text-gray-300">
+                  <span className="font-semibold">Exemplo (Lá Menor):</span> A - B - C - D - E - F - G - A
+                </p>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-lg bg-gradient-to-r from-[#10b981]/20 to-transparent border-l-4 border-[#10b981]">
+              <h4 className="text-xl font-bold text-white mb-3">🎶 Escala Pentatônica</h4>
+              <p className="text-gray-300 mb-3">
+                Apenas 5 notas! <span className="text-[#10b981] font-semibold">Fácil de usar e versátil</span>. 
+                Muito usada em blues, rock e solos.
+              </p>
+              <div className="p-3 rounded bg-[#10b981]/10">
+                <p className="text-sm text-gray-300">
+                  <span className="font-semibold">Exemplo (Pentatônica Menor de Lá):</span> A - C - D - E - G
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  
+  {
+    id: 'chord-formation',
+    title: 'Formação de Acordes',
+    icon: Target,
+    description: 'Descubra como acordes são construídos a partir de intervalos',
+    duration: '20 min',
+    difficulty: 'intermediate',
+    topics: ['Tríades', 'Tétrades', 'Inversões', 'Acordes estendidos'],
+    content: (
+      <div className="space-y-6">
+        <div className="p-6 rounded-xl bg-gradient-to-br from-[#1a1a2e] to-[#16213e] border border-white/10">
+          <h3 className="text-2xl font-bold text-white mb-4">Como Acordes são Construídos?</h3>
+          <p className="text-gray-300 mb-6">
+            Acordes são formados <span className="text-[#06b6d4] font-semibold">empilhando intervalos de terça</span>. 
+            É como construir uma torre com blocos musicais!
+          </p>
+
+          <div className="space-y-4">
+            <div className="p-5 rounded-lg bg-gradient-to-r from-[#10b981]/20 to-transparent border-l-4 border-[#10b981]">
+              <h4 className="text-xl font-bold text-white mb-3">🎸 Tríade Maior</h4>
+              <p className="text-gray-300 mb-3">
+                3 notas: <span className="text-[#10b981] font-semibold">Fundamental + Terça Maior + Quinta Justa</span>
+              </p>
+              <div className="p-3 rounded bg-[#10b981]/10">
+                <p className="text-sm text-gray-300 mb-2">
+                  <span className="font-semibold">Exemplo (Acorde de Dó):</span>
+                </p>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="px-3 py-1 rounded bg-[#10b981]/30 text-white font-bold">C</span>
+                  <span className="text-gray-400">+</span>
+                  <span className="px-3 py-1 rounded bg-[#10b981]/30 text-white font-bold">E</span>
+                  <span className="text-gray-400">(+4 semitons)</span>
+                  <span className="text-gray-400">+</span>
+                  <span className="px-3 py-1 rounded bg-[#10b981]/30 text-white font-bold">G</span>
+                  <span className="text-gray-400">(+3 semitons)</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-lg bg-gradient-to-r from-[#3b82f6]/20 to-transparent border-l-4 border-[#3b82f6]">
+              <h4 className="text-xl font-bold text-white mb-3">🎸 Tríade Menor</h4>
+              <p className="text-gray-300 mb-3">
+                3 notas: <span className="text-[#3b82f6] font-semibold">Fundamental + Terça Menor + Quinta Justa</span>
+              </p>
+              <div className="p-3 rounded bg-[#3b82f6]/10">
+                <p className="text-sm text-gray-300 mb-2">
+                  <span className="font-semibold">Exemplo (Acorde de Lá menor):</span>
+                </p>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="px-3 py-1 rounded bg-[#3b82f6]/30 text-white font-bold">A</span>
+                  <span className="text-gray-400">+</span>
+                  <span className="px-3 py-1 rounded bg-[#3b82f6]/30 text-white font-bold">C</span>
+                  <span className="text-gray-400">(+3 semitons)</span>
+                  <span className="text-gray-400">+</span>
+                  <span className="px-3 py-1 rounded bg-[#3b82f6]/30 text-white font-bold">E</span>
+                  <span className="text-gray-400">(+4 semitons)</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-lg bg-[#f59e0b]/10 border border-[#f59e0b]/30">
+              <h4 className="text-lg font-bold text-white mb-3">💡 Diferença Chave</h4>
+              <p className="text-gray-300">
+                A única diferença entre <span className="font-semibold">Maior</span> e <span className="font-semibold">Menor</span> 
+                é a terça! Maior = terça maior (4 semitons). Menor = terça menor (3 semitons).
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  
+  {
+    id: 'progressions',
+    title: 'Progressões Harmônicas',
+    icon: Waves,
+    description: 'Aprenda sequências de acordes que criam músicas',
+    duration: '25 min',
+    difficulty: 'advanced',
+    topics: ['Graus da escala', 'Progressões comuns', 'Campo harmônico', 'Substituições'],
+    content: (
+      <div className="space-y-6">
+        <div className="p-6 rounded-xl bg-gradient-to-br from-[#1a1a2e] to-[#16213e] border border-white/10">
+          <h3 className="text-2xl font-bold text-white mb-4">O que são Progressões Harmônicas?</h3>
+          <p className="text-gray-300 mb-6">
+            Progressões são <span className="text-[#06b6d4] font-semibold">sequências de acordes</span> que criam 
+            a estrutura harmônica de uma música. São como "frases musicais".
+          </p>
+
+          <div className="space-y-4">
+            <div className="p-5 rounded-lg bg-gradient-to-r from-[#8b5cf6]/20 to-transparent border-l-4 border-[#8b5cf6]">
+              <h4 className="text-xl font-bold text-white mb-3">🎵 Progressão I-IV-V</h4>
+              <p className="text-gray-300 mb-3">
+                A progressão mais famosa! Usada em <span className="text-[#8b5cf6] font-semibold">milhares de músicas</span>.
+              </p>
+              <div className="p-3 rounded bg-[#8b5cf6]/10 mb-3">
+                <p className="text-sm text-gray-300 mb-2">
+                  <span className="font-semibold">Em Dó Maior:</span> C (I) - F (IV) - G (V)
+                </p>
+                <p className="text-xs text-gray-400">
+                  Exemplos: "La Bamba", "Twist and Shout", "Louie Louie"
+                </p>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-lg bg-gradient-to-r from-[#06b6d4]/20 to-transparent border-l-4 border-[#06b6d4]">
+              <h4 className="text-xl font-bold text-white mb-3">🎵 Progressão I-V-vi-IV</h4>
+              <p className="text-gray-300 mb-3">
+                A "progressão pop"! <span className="text-[#06b6d4] font-semibold">Usada em hits modernos</span>.
+              </p>
+              <div className="p-3 rounded bg-[#06b6d4]/10 mb-3">
+                <p className="text-sm text-gray-300 mb-2">
+                  <span className="font-semibold">Em Dó Maior:</span> C (I) - G (V) - Am (vi) - F (IV)
+                </p>
+                <p className="text-xs text-gray-400">
+                  Exemplos: "Let It Be", "No Woman No Cry", "With or Without You"
+                </p>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-lg bg-gradient-to-r from-[#10b981]/20 to-transparent border-l-4 border-[#10b981]">
+              <h4 className="text-xl font-bold text-white mb-3">🎵 Progressão ii-V-I</h4>
+              <p className="text-gray-300 mb-3">
+                A base do <span className="text-[#10b981] font-semibold">Jazz e Bossa Nova</span>. Som sofisticado!
+              </p>
+              <div className="p-3 rounded bg-[#10b981]/10 mb-3">
+                <p className="text-sm text-gray-300 mb-2">
+                  <span className="font-semibold">Em Dó Maior:</span> Dm (ii) - G7 (V) - C (I)
+                </p>
+                <p className="text-xs text-gray-400">
+                  Exemplos: "Garota de Ipanema", "Fly Me to the Moon"
+                </p>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-lg bg-[#f59e0b]/10 border border-[#f59e0b]/30">
+              <h4 className="text-lg font-bold text-white mb-3">🎯 Dica de Composição</h4>
+              <p className="text-gray-300">
+                Começe com uma progressão simples (I-IV-V) e depois <span className="font-semibold">experimente substituições</span>! 
+                Troque o IV por um ii, ou adicione um vi antes do V.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
+  },
 ];
 
 export default function Theory() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [selectedModule, setSelectedModule] = useState<TheoryModule | null>(null);
+  const [showQuiz, setShowQuiz] = useState(false);
   const { xp, level, xpToNextLevel, currentStreak } = useGamificationStore();
   
   const userName = "João";
@@ -245,7 +570,44 @@ export default function Theory() {
                     </div>
                   </div>
 
-                  {selectedModule.content}
+                  {showQuiz && selectedModule.quiz ? (
+                    <TheoryQuiz
+                      moduleId={selectedModule.id}
+                      moduleTitle={selectedModule.title}
+                      questions={selectedModule.quiz}
+                      onComplete={() => setShowQuiz(false)}
+                    />
+                  ) : (
+                    <>
+                      {selectedModule.content}
+                      
+                      {/* Botões de Ação */}
+                      <div className="mt-6 pt-6 border-t border-white/10 space-y-3">
+                        {selectedModule.quiz && (
+                          <Button
+                            onClick={() => setShowQuiz(true)}
+                            className="w-full bg-gradient-to-r from-[#f59e0b] to-[#d97706] hover:from-[#d97706] hover:to-[#b45309] text-white py-6 text-lg"
+                          >
+                            <CheckCircle2 className="w-5 h-5 mr-2" />
+                            Fazer Quiz
+                          </Button>
+                        )}
+                        
+                        <Button
+                          onClick={() => {
+                            if (selectedModule.id === 'intervals') window.location.href = '/practice';
+                            if (selectedModule.id === 'scales') window.location.href = '/scales';
+                            if (selectedModule.id === 'chord-formation') window.location.href = '/chords';
+                            if (selectedModule.id === 'progressions') window.location.href = '/songs';
+                          }}
+                          className="w-full bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white py-6 text-lg"
+                        >
+                          <Play className="w-5 h-5 mr-2" />
+                          Praticar Agora
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </Card>
               </div>
             ) : (
@@ -341,7 +703,44 @@ export default function Theory() {
                   </div>
                 </div>
 
-                {selectedModule.content}
+                {showQuiz && selectedModule.quiz ? (
+                  <TheoryQuiz
+                    moduleId={selectedModule.id}
+                    moduleTitle={selectedModule.title}
+                    questions={selectedModule.quiz}
+                    onComplete={() => setShowQuiz(false)}
+                  />
+                ) : (
+                  <>
+                    {selectedModule.content}
+                    
+                    {/* Botões de Ação */}
+                    <div className="mt-6 pt-6 border-t border-white/10 space-y-3">
+                      {selectedModule.quiz && (
+                        <Button
+                          onClick={() => setShowQuiz(true)}
+                          className="w-full bg-gradient-to-r from-[#f59e0b] to-[#d97706] hover:from-[#d97706] hover:to-[#b45309] text-white py-6 text-lg"
+                        >
+                          <CheckCircle2 className="w-5 h-5 mr-2" />
+                          Fazer Quiz
+                        </Button>
+                      )}
+                      
+                      <Button
+                        onClick={() => {
+                          if (selectedModule.id === 'intervals') window.location.href = '/practice';
+                          if (selectedModule.id === 'scales') window.location.href = '/scales';
+                          if (selectedModule.id === 'chord-formation') window.location.href = '/chords';
+                          if (selectedModule.id === 'progressions') window.location.href = '/songs';
+                        }}
+                        className="w-full bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white py-6 text-lg"
+                      >
+                        <Play className="w-5 h-5 mr-2" />
+                        Praticar Agora
+                      </Button>
+                    </div>
+                  </>
+                )}
               </Card>
             </div>
           ) : (
