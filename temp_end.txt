@@ -1,0 +1,175 @@
+﻿  /**
+   * Treina o modelo com dados de datasets pÃºblicos
+   */
+  async trainWithPublicDatasets(): Promise<void> {
+    console.log('ðŸŽ¯ Iniciando treinamento com datasets pÃºblicos...');
+
+    try {
+      // Baixar e processar datasets
+      const guitarSetSamples = await datasetManager.downloadDataset('GuitarSet');
+      const idmtSamples = await datasetManager.downloadDataset('IDMT-SMT-Guitar');
+
+      const allSamples = [...guitarSetSamples, ...idmtSamples];
+      console.log(`ðŸ“Š Total de amostras coletadas: ${allSamples.length}`);
+
+      // Aplicar data augmentation
+      const augmentedSamples = datasetManager.applyDataAugmentation(allSamples);
+      console.log(`ðŸ”„ ApÃ³s augmentation: ${augmentedSamples.length} amostras`);
+
+      // Preparar dados para treinamento
+      const trainingData = await this.prepareTrainingData(augmentedSamples);
+      console.log(`ðŸŽ¯ Dados preparados: ${trainingData.features.length} exemplos de treinamento`);
+
+      // Treinar modelo
+      await this.trainModel(trainingData);
+
+      // Salvar modelo treinado
+      await this.saveTrainedModel();
+
+      console.log('âœ… Treinamento concluÃ­do com sucesso!');
+
+    } catch (error) {
+      console.error('âŒ Erro durante treinamento:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Prepara dados para treinamento
+   */
+  private async prepareTrainingData(samples: any[]): Promise<TrainingData> {
+    return datasetManager.prepareTrainingData(samples, this.chordVocabulary);
+  }
+
+  /**
+   * Treina o modelo com dados preparados
+   */
+  private async trainModel(trainingData: TrainingData): Promise<void> {
+    if (!this.model) throw new Error('Modelo nÃ£o inicializado');
+
+    console.log('ðŸš€ Iniciando treinamento do modelo...');
+
+    // Converter dados para tensores
+    const xTrain = tf.tensor3d(trainingData.features);
+    const yTrain = tf.tensor2d(trainingData.labels.map(label =>
+      this.chordVocabulary.map((_, index) => index === label ? 1 : 0)
+    ));
+
+    // Treinar
+    await this.model.fit(xTrain, yTrain, {
+      epochs: 50,
+      batchSize: 32,
+      validationSplit: 0.2,
+      callbacks: {
+        onEpochEnd: (epoch, logs) => {
+          if ((epoch + 1) % 10 === 0) {
+            console.log(`ðŸ“ˆ Epoch ${epoch + 1}: loss = ${logs?.loss?.toFixed(4)}, accuracy = ${(logs?.acc ? (logs.acc * 100).toFixed(2) : 'N/A')}%`);
+          }
+        },
+        onTrainEnd: () => {
+          console.log('âœ… Treinamento finalizado');
+        }
+      }
+    });
+
+    // Limpar memÃ³ria
+    xTrain.dispose();
+    yTrain.dispose();
+
+    console.log('ðŸŽ‰ Modelo treinado com sucesso!');
+  }
+
+  /**
+   * Salva o modelo treinado
+   */
+  async saveTrainedModel(): Promise<void> {
+    if (!this.model) throw new Error('Modelo nÃ£o inicializado');
+
+    const modelName = `chord-detection-model-${Date.now()}`;
+
+    try {
+      await this.model.save(`localstorage://${modelName}`);
+      localStorage.setItem('musictutor_trained_model', modelName);
+      console.log(`ðŸ’¾ Modelo salvo: ${modelName}`);
+    } catch (error) {
+      console.error('Erro ao salvar modelo:', error);
+      // Fallback: salvar como download
+      await this.model.save('downloads://chord-detection-model');
+    }
+  }
+
+  /**
+   * Carrega um modelo treinado salvo localmente
+   */
+  async loadTrainedModel(): Promise<boolean> {
+    try {
+      const modelName = localStorage.getItem('musictutor_trained_model');
+
+      if (modelName) {
+        this.model = await tf.loadLayersModel(`localstorage://${modelName}`);
+        console.log(`âœ… Modelo treinado carregado: ${modelName}`);
+        return true;
+      }
+
+      console.log('â„¹ï¸ Nenhum modelo treinado encontrado');
+      return false;
+    } catch (error) {
+      console.error('Erro ao carregar modelo treinado:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Salva o modelo para download
+   */
+  async saveModel(): Promise<void> {
+    if (!this.model) throw new Error('Modelo nÃ£o inicializado');
+
+    await this.model.save('downloads://chord-detection-model');
+    console.log('âœ… Modelo exportado para download');
+  }
+
+  /**
+   * Carrega modelo de URL externa
+   */
+  async loadModelFromUrl(modelUrl: string): Promise<void> {
+    try {
+      this.model = await tf.loadLayersModel(modelUrl);
+      console.log('âœ… Modelo carregado de URL externa');
+    } catch (error) {
+      console.error('Erro ao carregar modelo:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ObtÃ©m estatÃ­sticas de performance
+   */
+  getPerformanceStats(): {
+    isInitialized: boolean;
+    modelLoaded: boolean;
+    backend: string;
+    memoryUsage: number;
+  } {
+    return {
+      isInitialized: this.isInitialized,
+      modelLoaded: !!this.model,
+      backend: tf.getBackend(),
+      memoryUsage: tf.memory().numBytes
+    };
+  }
+
+  /**
+   * Limpa recursos
+   */
+  dispose(): void {
+    if (this.model) {
+      this.model.dispose();
+      this.model = null;
+    }
+
+    this.isInitialized = false;
+  }
+}
+
+export const chordDetectionAIService = ChordDetectionAIService.getInstance();

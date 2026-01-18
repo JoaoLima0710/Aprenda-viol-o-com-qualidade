@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
-import { Heart, Music, Play } from 'lucide-react';
+import { Heart, Music, Play, Lock } from 'lucide-react';
 import { Song } from '@/data/songs';
 import { useSongStore } from '@/stores/useSongStore';
+import { useSongUnlockStore } from '@/stores/useSongUnlockStore';
 
 interface SongCardProps {
   song: Song;
@@ -25,7 +26,9 @@ const difficultyLabels: Record<Song['difficulty'], string> = {
 
 export function SongCard({ song, onClick }: SongCardProps) {
   const { isFavorite, toggleFavorite } = useSongStore();
+  const { isSongUnlocked } = useSongUnlockStore();
   const favorite = isFavorite(song.id);
+  const isUnlocked = isSongUnlocked(song.id);
   
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -94,9 +97,22 @@ export function SongCard({ song, onClick }: SongCardProps) {
         </div>
         
         {/* Play Button */}
-        <div className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r ${genreColors[song.genre]} text-white font-semibold text-sm group-hover:shadow-lg transition-shadow`}>
-          <Play className="w-4 h-4" />
-          <span>Praticar</span>
+        <div className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl ${
+          isUnlocked 
+            ? `bg-gradient-to-r ${genreColors[song.genre]} text-white font-semibold text-sm group-hover:shadow-lg transition-shadow`
+            : 'bg-gray-600/50 text-gray-400 font-semibold text-sm cursor-not-allowed'
+        }`}>
+          {isUnlocked ? (
+            <>
+              <Play className="w-4 h-4" />
+              <span>Praticar</span>
+            </>
+          ) : (
+            <>
+              <Lock className="w-4 h-4" />
+              <span>Bloqueada</span>
+            </>
+          )}
         </div>
       </div>
     </motion.div>

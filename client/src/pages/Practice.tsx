@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocation } from 'wouter';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { MobileSidebar } from '@/components/layout/MobileSidebar';
@@ -7,14 +8,18 @@ import { Metronome } from '@/components/practice/Metronome';
 import { PitchDetector } from '@/components/practice/PitchDetector';
 import { SpectrumVisualizer } from '@/components/practice/SpectrumVisualizer';
 import { EarTraining } from '@/components/practice/EarTraining';
+import { RealtimeChordDetector } from '@/components/chord-detection/RealtimeChordDetector';
 import { useGamificationStore } from '@/stores/useGamificationStore';
-import { Clock } from 'lucide-react';
+import { Clock, Guitar, Target, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function Practice() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  
+  const [, setLocation] = useLocation();
+
   const { xp, level, xpToNextLevel, currentStreak } = useGamificationStore();
-  
+
   const userName = "João";
   
   return (
@@ -39,7 +44,63 @@ export default function Practice() {
               </div>
               <p className="text-gray-400">Metrônomo e outras ferramentas para melhorar sua prática</p>
             </header>
-            
+
+            {/* Real-time Chord Practice - Featured */}
+            <Card className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 border-purple-500/30">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
+                      <Zap className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl text-white">Prática Inteligente de Acordes</CardTitle>
+                      <p className="text-gray-400">Detecção em tempo real com feedback instantâneo</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => setLocation('/chord-practice')}
+                    className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                    size="lg"
+                  >
+                    <Target className="w-5 h-5 mr-2" />
+                    Começar Prática
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-3 gap-4 mb-4">
+                  <div className="text-center">
+                    <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <span className="text-green-400 text-sm">✓</span>
+                    </div>
+                    <p className="text-sm text-gray-300">Feedback Instantâneo</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <span className="text-blue-400 text-sm">🎯</span>
+                    </div>
+                    <p className="text-sm text-gray-300">Correções Específicas</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <span className="text-purple-400 text-sm">🎸</span>
+                    </div>
+                    <p className="text-sm text-gray-300">Adaptação ao Nível</p>
+                  </div>
+                </div>
+                <div className="bg-white/5 rounded-lg p-4">
+                  <h4 className="text-white font-semibold mb-2">Como Funciona:</h4>
+                  <ul className="text-sm text-gray-300 space-y-1">
+                    <li>• Toque um acorde e receba feedback visual imediato</li>
+                    <li>• Veja quais cordas estão corretas (verde) ou precisam ajuste (vermelho)</li>
+                    <li>• Receba sugestões específicas para correção</li>
+                    <li>• Progrida através de níveis de dificuldade adaptativos</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Ear Training */}
             <div>
               <h2 className="text-2xl font-bold text-white mb-4">🎵 Treino de Ouvido</h2>

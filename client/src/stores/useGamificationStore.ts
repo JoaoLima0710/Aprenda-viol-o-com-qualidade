@@ -31,6 +31,8 @@ interface GamificationStore {
   currentStreak: number;
   maxStreak: number;
   lastActivityDate: string;
+  streakFreezes: number; // Freezes disponíveis para iniciantes
+  frozenStreak: boolean; // Se o streak está congelado
   
   // Missões
   dailyMissions: Mission[];
@@ -43,6 +45,7 @@ interface GamificationStore {
   updateMissionProgress: (missionId: string, progress: number) => void;
   unlockAchievement: (achievementId: string) => void;
   updateStreak: () => void;
+  freezeStreak: () => void; // Congelar streak (para iniciantes)
   resetDailyMissions: () => void;
 }
 
@@ -132,6 +135,8 @@ export const useGamificationStore = create<GamificationStore>()(
       currentStreak: 0,
       maxStreak: 0,
       lastActivityDate: '',
+      streakFreezes: 3, // Iniciantes começam com 3 freezes
+      frozenStreak: false,
       dailyMissions: initialMissions,
       achievements: initialAchievements,
       
@@ -206,8 +211,17 @@ export const useGamificationStore = create<GamificationStore>()(
         }
         
         const yesterday = new Date(Date.now() - 86400000).toDateString();
+        const daysSinceLastActivity = Math.floor(
+          (Date.now() - new Date(lastActivity || yesterday).getTime()) / (1000 * 60 * 60 * 24)
+        );
+        
+        // Se estava congelado, descongelar
+        if (state.frozenStreak) {
+          set({ frozenStreak: false });
+        }
         
         if (lastActivity === yesterday) {
+          // Streak continua normalmente
           const newStreak = state.currentStreak + 1;
           set({
             currentStreak: newStreak,
@@ -219,10 +233,37 @@ export const useGamificationStore = create<GamificationStore>()(
           if (newStreak === 7) {
             get().unlockAchievement('week-streak');
           }
+        } else if (daysSinceLastActivity <= 2 && state.level <= 3) {
+          // Para iniciantes (nível 1-3), permite 1 dia de folga sem perder streak
+          // Mas reduz o streak em 1 como "decadência"
+          const newStreak = Math.max(0, state.currentStreak - 1);
+          set({
+            currentStreak: newStreak,
+            lastActivityDate: today,
+          });
+        } else if (daysSinceLastActivity > 2 && state.level <= 3 && state.streakFreezes > 0) {
+          // Se passou mais de 2 dias e tem freezes, pode usar um freeze
+          // O streak não é perdido, mas não aumenta
+          set({
+            streakFreezes: state.streakFreezes - 1,
+            frozenStreak: true,
+            lastActivityDate: today,
+          });
         } else {
+          // Perde o streak normalmente
           set({
             currentStreak: 1,
             lastActivityDate: today,
+          });
+        }
+      },
+      
+      freezeStreak: () => {
+        const state = get();
+        if (state.streakFreezes > 0 && state.level <= 3) {
+          set({
+            streakFreezes: state.streakFreezes - 1,
+            frozenStreak: true,
           });
         }
       },

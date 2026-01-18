@@ -6,16 +6,72 @@ interface PWAInstallPrompt extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+export interface DeviceInfo {
+  type: 'mobile' | 'tablet' | 'desktop';
+  platform: 'ios' | 'android' | 'windows' | 'mac' | 'linux' | 'unknown';
+  isPWA: boolean;
+  supportsPWA: boolean;
+}
+
 export function usePWA() {
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<PWAInstallPrompt | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
+  const [deviceInfo, setDeviceInfo] = useState<DeviceInfo>({
+    type: 'desktop',
+    platform: 'unknown',
+    isPWA: false,
+    supportsPWA: false
+  });
 
   useEffect(() => {
+    // Detect device information
+    const detectDevice = () => {
+      const userAgent = navigator.userAgent.toLowerCase();
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+
+      // Detect platform
+      let platform: DeviceInfo['platform'] = 'unknown';
+      if (userAgent.includes('android')) {
+        platform = 'android';
+      } else if (userAgent.includes('iphone') || userAgent.includes('ipad') || userAgent.includes('ipod')) {
+        platform = 'ios';
+      } else if (userAgent.includes('windows')) {
+        platform = 'windows';
+      } else if (userAgent.includes('mac')) {
+        platform = 'mac';
+      } else if (userAgent.includes('linux')) {
+        platform = 'linux';
+      }
+
+      // Detect device type
+      let type: DeviceInfo['type'] = 'desktop';
+      const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+      const isTablet = /ipad|android(?!.*mobile)/i.test(userAgent);
+
+      if (isTablet) {
+        type = 'tablet';
+      } else if (isMobile) {
+        type = 'mobile';
+      }
+
+      // Check PWA support
+      const supportsPWA = 'serviceWorker' in navigator && 'BeforeInstallPromptEvent' in window;
+
+      setDeviceInfo({
+        type,
+        platform,
+        isPWA: isStandalone,
+        supportsPWA
+      });
+
+      return isStandalone;
+    };
+
     // Check if already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    if (detectDevice()) {
       setIsInstalled(true);
     }
 
@@ -144,5 +200,6 @@ export function usePWA() {
     updateAvailable,
     installApp,
     checkForUpdates,
+    deviceInfo,
   };
 }

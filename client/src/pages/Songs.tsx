@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGamificationStore } from '@/stores/useGamificationStore';
 import { useSongStore } from '@/stores/useSongStore';
+import { useSongUnlockStore } from '@/stores/useSongUnlockStore';
 import { songs, genres, difficulties, getSongsByGenre, getSongsByDifficulty, searchSongs, Song } from '@/data/songs';
-import { Search, Heart, Music2 } from 'lucide-react';
+import { Search, Heart, Music2, Lock } from 'lucide-react';
 import { useLocation } from 'wouter';
 
 export default function Songs() {
@@ -22,6 +23,7 @@ export default function Songs() {
   
   const { xp, level, xpToNextLevel, currentStreak } = useGamificationStore();
   const { favorites } = useSongStore();
+  const { isSongUnlocked, getUnlockedSongs, getLockedSongs } = useSongUnlockStore();
   
   const userName = "João";
   

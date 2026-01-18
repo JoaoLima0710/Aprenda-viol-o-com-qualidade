@@ -1,12 +1,13 @@
-import { Menu, Bell, Guitar } from 'lucide-react';
+import { Menu, Bell, Guitar, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface MobileHeaderProps {
   userName: string;
   onMenuClick: () => void;
+  onThemeClick?: () => void;
 }
 
-export function MobileHeader({ userName, onMenuClick }: MobileHeaderProps) {
+export function MobileHeader({ userName, onMenuClick, onThemeClick }: MobileHeaderProps) {
   return (
     <header className="sticky top-0 z-40 bg-[#0f0f1a]/95 backdrop-blur-xl border-b border-white/10 lg:hidden">
       <div className="flex items-center justify-between px-5 py-4">
@@ -33,10 +34,10 @@ export function MobileHeader({ userName, onMenuClick }: MobileHeaderProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="relative text-white hover:bg-white/10"
+          onClick={onThemeClick}
+          className="text-white hover:bg-white/10"
         >
-          <Bell className="w-6 h-6" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-[#a855f7] rounded-full border-2 border-[#0f0f1a]"></span>
+          <Palette className="w-6 h-6" />
         </Button>
       </div>
     </header>

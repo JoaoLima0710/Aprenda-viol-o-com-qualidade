@@ -11,6 +11,21 @@ Aplicativo web educacional gamificado para aprendizado de violão, com treino de
 - **Animações Suaves**: Transições e hover effects
 - **Totalmente Responsivo**: Desktop (sidebar) + Mobile (bottom nav)
 
+### 📱 Progressive Web App (PWA)
+- ✅ **Instalável**: Adicione à tela inicial como app nativo
+- ✅ **Offline-First**: Funciona sem internet após primeira carga
+- ✅ **Performance Nativa**: Carregamento instantâneo, animações suaves
+- ✅ **Notificações Push**: Lembretes de prática (futuro)
+- ✅ **Compatibilidade Total**: Desktop, Android, iOS
+- ✅ **Cache Inteligente**: Service Worker otimizado
+
+### 🚀 Deploy no Vercel
+- ✅ **Deploy Automático**: Git push = deploy instantâneo
+- ✅ **CDN Global**: Carregamento ultra-rápido worldwide
+- ✅ **SSL Automático**: HTTPS por padrão
+- ✅ **Analytics Integrado**: Métricas de performance
+- ✅ **Rollback Instantâneo**: Voltar versão anterior facilmente
+
 ### 🎵 Módulos Educacionais
 
 #### 1. **Acordes** (`/chords`)
@@ -278,6 +293,66 @@ pnpm start
 - **Memoização**: Componentes otimizados com React.memo
 - **Debounce**: Inputs com debounce para evitar re-renders
 - **Virtual scrolling**: Para listas longas (futuro)
+
+## 🚀 Instalação e Deploy
+
+### Desenvolvimento Local
+```bash
+# Clone o repositório
+git clone https://github.com/seu-usuario/musictutor.git
+cd musictutor
+
+# Instale as dependências
+pnpm install
+
+# Rode o servidor de desenvolvimento
+pnpm run dev
+
+# Acesse http://localhost:3007
+```
+
+### 🏗️ Build para Produção
+```bash
+# Build otimizado
+pnpm run build
+
+# Preview local
+pnpm run preview
+```
+
+### 🚀 Deploy no Vercel
+```bash
+# Deploy automático (recomendado)
+# 1. Importe o repositório no Vercel (vercel.com/new)
+# 2. Configure:
+#    - Framework: Other
+#    - Build Command: pnpm run build:vercel
+#    - Output Directory: dist/public
+
+# Ou deploy manual com script
+chmod +x deploy-vercel.sh
+./deploy-vercel.sh
+```
+
+### 📱 Instalação PWA
+
+#### Desktop (Chrome/Edge/Firefox):
+1. Abra o site no navegador
+2. Clique no ícone de instalação na barra de endereços
+3. Ou clique em "Instalar MusicTutor" na página
+
+#### Android:
+1. Abra no Chrome/Edge
+2. Toque em "Instalar" ou menu → "Adicionar à tela inicial"
+
+#### iOS (Safari):
+1. Abra no Safari
+2. Toque no botão compartilhar → "Adicionar à Tela Inicial"
+
+### ✅ Verificação PWA
+- Abra DevTools → Lighthouse → Progressive Web App
+- Deve ter score > 90 em todas as métricas
+- Deve funcionar offline após primeira carga
 
 ## 🤝 Contribuindo
 

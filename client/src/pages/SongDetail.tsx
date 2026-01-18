@@ -6,17 +6,23 @@ import { MobileSidebar } from '@/components/layout/MobileSidebar';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
 import { ChordSheetWithPlayer } from '@/components/songs/ChordSheetWithPlayer';
 import { KaraokeMode } from '@/components/songs/KaraokeMode';
+import { PerformanceMode } from '@/components/songs/PerformanceMode';
+import { SheetMusicMode } from '@/components/songs/SheetMusicMode';
 import { Metronome } from '@/components/practice/Metronome';
 import { PracticeMode } from '@/components/practice/PracticeMode';
 import { AudioRecorder } from '@/components/practice/AudioRecorder';
 import { Button } from '@/components/ui/button';
 import { useGamificationStore } from '@/stores/useGamificationStore';
 import { useSongStore } from '@/stores/useSongStore';
+import { useSongUnlockStore } from '@/stores/useSongUnlockStore';
 import { getSongById } from '@/data/songs';
 import { PdfExportService } from '@/services/PdfExportService';
 import { cifraClubService } from '@/services/CifraClubService';
+import { songAnalysisService } from '@/services/SongAnalysisService';
+import { getRecommendedPreset } from '@/services/MetronomePresets';
+import { SongSkillTreeComponent } from '@/components/songs/SongSkillTree';
 import { toast } from 'sonner';
-import { ArrowLeft, Heart, Play, Music, Clock, TrendingUp, Lightbulb, Mic, Maximize2, Download, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Heart, Play, Music, Clock, TrendingUp, Lightbulb, Mic, Maximize2, Download, ExternalLink, Lock, ChevronUp, ChevronDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const genreColors: Record<string, string> = {
@@ -42,9 +48,15 @@ export default function SongDetail() {
   const [showPracticeMode, setShowPracticeMode] = useState(false);
   const [showRecorder, setShowRecorder] = useState(false);
   const [showKaraoke, setShowKaraoke] = useState(false);
+  const [showPerformanceMode, setShowPerformanceMode] = useState(false);
+  const [showSheetMusic, setShowSheetMusic] = useState(false);
+  const [transposition, setTransposition] = useState(0); // Semitons: -12 to +12
+  const [capo, setCapo] = useState(0); // Capo position: 0 to 12
+  const [simplified, setSimplified] = useState(false);
   
   const { xp, level, xpToNextLevel, currentStreak } = useGamificationStore();
   const { isFavorite, toggleFavorite, markAsPracticed } = useSongStore();
+  const { isSongUnlocked, getUnlockRequirements } = useSongUnlockStore();
   
   const userName = "João";
   const songId = params?.id || '';
@@ -61,10 +73,38 @@ export default function SongDetail() {
   }
   
   const favorite = isFavorite(song.id);
+  const isUnlocked = isSongUnlocked(song.id);
+  const unlockRequirements = getUnlockRequirements(song.id);
+  const complexity = songAnalysisService.analyzeComplexity(song);
+  const skillTree = songAnalysisService.createSkillTree(song);
+  const readiness = songAnalysisService.isUserReadyForSong(song);
+  
+  // Transpose chords
+  const transposeChord = (chord: string, semitones: number): string => {
+    // Simplified transposition - would need full chord library for accurate transposition
+    const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const baseNote = chord.match(/^[A-G]#?b?/)?.[0] || 'C';
+    const noteIndex = notes.indexOf(baseNote);
+    if (noteIndex === -1) return chord;
+    
+    const newIndex = (noteIndex + semitones + 12) % 12;
+    const newNote = notes[newIndex];
+    return chord.replace(baseNote, newNote);
+  };
+  
+  const getTransposedChords = () => {
+    if (transposition === 0 && capo === 0) return song.chords;
+    const totalSemitones = transposition + capo;
+    return song.chords.map(chord => transposeChord(chord, totalSemitones));
+  };
   
   const handlePractice = () => {
+    if (!isUnlocked) {
+      toast.error('Esta música ainda está bloqueada. Complete os requisitos para desbloqueá-la!');
+      return;
+    }
     markAsPracticed(song.id);
-    // TODO: Open practice mode
+    setShowPerformanceMode(true);
   };
   
   const handleExportPdf = async () => {
@@ -166,6 +206,116 @@ export default function SongDetail() {
                   </div>
                 </div>
                 
+                {/* Lock Status */}
+                {!isUnlocked && (
+                  <div className="mb-6 p-4 rounded-xl bg-yellow-500/20 border border-yellow-500/30">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Lock className="w-5 h-5 text-yellow-400" />
+                      <h3 className="text-lg font-bold text-yellow-400">Música Bloqueada</h3>
+                    </div>
+                    <p className="text-sm text-gray-300 mb-3">Complete os requisitos para desbloquear:</p>
+                    <ul className="space-y-2">
+                      {unlockRequirements.requirements.map((req, index) => (
+                        <li key={index} className="flex items-center gap-2 text-sm">
+                          <span className={req.met ? 'text-green-400' : 'text-gray-400'}>
+                            {req.met ? '✓' : '○'}
+                          </span>
+                          <span className={req.met ? 'text-gray-300 line-through' : 'text-gray-300'}>
+                            {req.description}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {/* Transposition & Capo Controls */}
+                <div className="mb-6 p-4 rounded-xl bg-[#1a1a2e]/60 border border-white/10">
+                  <h3 className="text-sm font-semibold text-gray-400 mb-3">Ajustar Tom</h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    {/* Transposition */}
+                    <div>
+                      <label className="text-xs text-gray-400 mb-2 block">Transposição</label>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          onClick={() => setTransposition(Math.max(-12, transposition - 1))}
+                          variant="outline"
+                          size="sm"
+                          className="bg-transparent border-white/20 text-white"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </Button>
+                        <span className="px-3 py-1 bg-white/10 rounded text-white font-mono text-sm min-w-[3rem] text-center">
+                          {transposition > 0 ? `+${transposition}` : transposition}
+                        </span>
+                        <Button
+                          onClick={() => setTransposition(Math.min(12, transposition + 1))}
+                          variant="outline"
+                          size="sm"
+                          className="bg-transparent border-white/20 text-white"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Capo */}
+                    <div>
+                      <label className="text-xs text-gray-400 mb-2 block">Capotraste</label>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          onClick={() => setCapo(Math.max(0, capo - 1))}
+                          variant="outline"
+                          size="sm"
+                          className="bg-transparent border-white/20 text-white"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </Button>
+                        <span className="px-3 py-1 bg-white/10 rounded text-white font-mono text-sm min-w-[3rem] text-center">
+                          {capo}
+                        </span>
+                        <Button
+                          onClick={() => setCapo(Math.min(12, capo + 1))}
+                          variant="outline"
+                          size="sm"
+                          className="bg-transparent border-white/20 text-white"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Simplify */}
+                    <div>
+                      <label className="text-xs text-gray-400 mb-2 block">Simplificar</label>
+                      <Button
+                        onClick={() => setSimplified(!simplified)}
+                        variant={simplified ? 'default' : 'outline'}
+                        size="sm"
+                        className={simplified ? 'bg-purple-500 text-white' : 'bg-transparent border-white/20 text-white'}
+                      >
+                        {simplified ? 'Ativo' : 'Inativo'}
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {(transposition !== 0 || capo !== 0) && (
+                    <div className="mt-3 pt-3 border-t border-white/10">
+                      <p className="text-xs text-gray-400 mb-2">Acordes Transpostos:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {getTransposedChords().map((chord, index) => (
+                          <span
+                            key={index}
+                            className="px-3 py-1 rounded-lg bg-purple-500/20 text-purple-300 font-mono text-sm font-bold"
+                          >
+                            {chord}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
                 {/* Chords */}
                 <div className="mb-6">
                   <h3 className="text-sm font-semibold text-gray-400 mb-3">Acordes Usados</h3>
@@ -186,10 +336,11 @@ export default function SongDetail() {
                   <div className="grid grid-cols-2 gap-3">
                     <Button
                       onClick={handlePractice}
-                      className={`bg-gradient-to-r ${genreColors[song.genre]} text-white font-semibold text-lg py-6`}
+                      disabled={!isUnlocked}
+                      className={`bg-gradient-to-r ${genreColors[song.genre]} text-white font-semibold text-lg py-6 ${!isUnlocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <Play className="w-5 h-5 mr-2" />
-                      Praticar
+                      {isUnlocked ? 'Modo Performance' : 'Bloqueada'}
                     </Button>
                     <Button
                       onClick={() => setShowKaraoke(true)}
@@ -197,6 +348,23 @@ export default function SongDetail() {
                     >
                       <Maximize2 className="w-5 h-5 mr-2" />
                       Karaokê
+                    </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      onClick={() => setShowSheetMusic(true)}
+                      variant="outline"
+                      className="bg-white text-gray-900 border-2 border-gray-300 hover:bg-gray-50 font-semibold text-lg py-6"
+                    >
+                      📄 Modo Partitura
+                    </Button>
+                    <Button
+                      onClick={() => setShowPerformanceMode(true)}
+                      disabled={!isUnlocked}
+                      className={`bg-gradient-to-r ${genreColors[song.genre]} text-white font-semibold text-lg py-6 ${!isUnlocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      🎭 Performance
                     </Button>
                   </div>
                   
@@ -219,6 +387,17 @@ export default function SongDetail() {
                 </div>
               </div>
             </motion.div>
+            
+            {/* Song Skill Tree */}
+            <div className="rounded-2xl p-6 bg-gradient-to-br from-[#8b5cf6]/20 to-[#a855f7]/10 border border-[#8b5cf6]/30">
+              <SongSkillTreeComponent 
+                skillTree={skillTree}
+                onChallengeStart={(challengeId) => {
+                  // TODO: Implementar navegação para desafio específico
+                  setShowPracticeMode(true);
+                }}
+              />
+            </div>
             
             {/* Practice Mode Toggle */}
             <div className="flex gap-3">
@@ -280,8 +459,23 @@ export default function SongDetail() {
             {/* Metronome */}
             {showMetronome && (
               <div>
-                <h2 className="text-2xl font-bold text-white mb-4">Metrônomo</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold text-white">Metrônomo</h2>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-400">
+                      Preset: {getRecommendedPreset(song.bpm, song.genre).name}
+                    </span>
+                  </div>
+                </div>
                 <Metronome defaultBpm={song.bpm} />
+                <div className="mt-4 p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-sm text-gray-400 mb-2">
+                    💡 Dica: Esta música usa ritmo de {song.genre} com backbeat nos tempos 2 e 4
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Mantenha o groove constante em {song.bpm} BPM
+                  </p>
+                </div>
               </div>
             )}
             
@@ -483,6 +677,31 @@ export default function SongDetail() {
           artist={song.artist}
           onClose={() => setShowKaraoke(false)}
         />
+      )}
+      
+      {/* Performance Mode */}
+      {showPerformanceMode && (
+        <div className="fixed inset-0 z-50 bg-[#0f0f1a]">
+          <PerformanceMode
+            songTitle={song.title}
+            artist={song.artist}
+            chordSheet={song.chordSheet}
+            bpm={song.bpm}
+            onClose={() => setShowPerformanceMode(false)}
+          />
+        </div>
+      )}
+      
+      {/* Sheet Music Mode */}
+      {showSheetMusic && (
+        <div className="fixed inset-0 z-50">
+          <SheetMusicMode
+            chordSheet={song.chordSheet}
+            title={song.title}
+            artist={song.artist}
+            onClose={() => setShowSheetMusic(false)}
+          />
+        </div>
       )}
     </>
   );
