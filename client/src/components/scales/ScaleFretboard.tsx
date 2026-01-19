@@ -304,6 +304,8 @@ export function ScaleFretboard({ scaleName, scaleNotes, tonic, intervals }: Scal
   // Calcular posições dinâmicas da escala
   const scalePattern = calculateScalePositions(tonic, intervals);
 
+  console.log('🎸 ScaleFretboard - NEW VERSION LOADED');
+  console.log('🎸 Scale:', scaleName, 'Root:', tonic, 'Intervals:', intervals);
   console.log('🎸 Scale positions calculated:', scalePattern);
 
   // Função para tocar a escala com animação - CORRIGIDA
@@ -366,9 +368,12 @@ export function ScaleFretboard({ scaleName, scaleNotes, tonic, intervals }: Scal
           <h3 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3 mb-2">
             <span className="text-4xl">🎸</span>
             <span>Diagrama da Escala</span>
+            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full border border-green-500/30">
+              v2.0
+            </span>
           </h3>
           <p className="text-sm md:text-base text-gray-400">
-            Siga os números na ordem. As setas verdes mostram o caminho. A nota com ⭐ é a tônica.
+            Siga os números na ordem sequencial (① → ② → ③...). As setas verdes mostram o caminho lógico. A nota com ⭐ é a tônica.
           </p>
         </div>
         
