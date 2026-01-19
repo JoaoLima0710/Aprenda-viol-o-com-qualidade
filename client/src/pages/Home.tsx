@@ -239,6 +239,63 @@ export default function Home() {
               </Button>
             </header>
             
+            {/* Daily Training - PRIMEIRO */}
+            <section>
+              <DailyTraining />
+            </section>
+            
+            {/* Daily Goal */}
+            <section>
+              <DailyGoalCard current={15} total={30} streak={currentStreak} />
+            </section>
+            
+            {/* Today's Challenge */}
+            <section>
+              <ChallengeCard 
+                title="Desbloquear Nova Música"
+                description={`Complete ${nextUnlockable.length > 0 ? 'uma música já disponível' : 'os requisitos para desbloquear mais músicas'}`}
+                xp={200}
+              />
+            </section>
+            
+            {/* Continue Learning */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Continue de onde parou</h2>
+                  <p className="text-sm text-gray-400 mt-1">Retome suas lições em andamento</p>
+                </div>
+                <button 
+                  onClick={() => setLocation('/chords')}
+                  className="text-sm text-[#06b6d4] font-semibold hover:text-[#22d3ee] transition-colors flex items-center gap-1"
+                >
+                  <span>Ver tudo</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+              
+              <ContinueLearning lessons={continueLearningData} />
+            </section>
+            
+            {/* Training Modules */}
+            <section>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-white mb-1">Treino de Hoje</h2>
+                <p className="text-sm text-gray-400">Módulos de prática</p>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {todayModules.map((module, index) => (
+                  <TrainingModule key={index} {...module} />
+                ))}
+              </div>
+            </section>
+            
+            {/* AI Assistant */}
+            <section>
+              <AIAssistant />
+            </section>
+            
             {/* Featured: Next Songs to Unlock */}
             {nextUnlockable.length > 0 && (
               <section>
@@ -318,63 +375,6 @@ export default function Home() {
               </section>
             )}
             
-            {/* Daily Training */}
-            <section>
-              <DailyTraining />
-            </section>
-            
-            {/* AI Assistant */}
-            <section>
-              <AIAssistant />
-            </section>
-            
-            {/* Daily Goal */}
-            <section>
-              <DailyGoalCard current={15} total={30} streak={currentStreak} />
-            </section>
-            
-            {/* Today's Challenge */}
-            <section>
-              <ChallengeCard 
-                title="Desbloquear Nova Música"
-                description={`Complete ${nextUnlockable.length > 0 ? 'uma música já disponível' : 'os requisitos para desbloquear mais músicas'}`}
-                xp={200}
-              />
-            </section>
-            
-            {/* Continue Learning */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-white">Continue de onde parou</h2>
-                  <p className="text-sm text-gray-400 mt-1">Retome suas lições em andamento</p>
-                </div>
-                <button 
-                  onClick={() => setLocation('/chords')}
-                  className="text-sm text-[#06b6d4] font-semibold hover:text-[#22d3ee] transition-colors flex items-center gap-1"
-                >
-                  <span>Ver tudo</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-              
-              <ContinueLearning lessons={continueLearningData} />
-            </section>
-            
-            {/* Training Modules */}
-            <section>
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-white mb-1">Treino de Hoje</h2>
-                <p className="text-sm text-gray-400">Módulos de prática</p>
-              </div>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                {todayModules.map((module, index) => (
-                  <TrainingModule key={index} {...module} />
-                ))}
-              </div>
-            </section>
-            
             {/* First Song Path */}
             <section>
               <FirstSongPath />
@@ -401,7 +401,7 @@ export default function Home() {
                     <h1 className="text-4xl font-bold text-white mb-2">
                       Boa tarde, {userName} 👋
                     </h1>
-                    <p className="text-gray-400">
+                    <p className="text-gray-300 text-base font-medium">
                       {unlockedSongs.length} músicas desbloqueadas • {nextUnlockable.length} prontas para desbloquear
                     </p>
                   </div>
@@ -415,6 +415,63 @@ export default function Home() {
                     <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#a855f7] rounded-full border-2 border-[#0f0f1a] shadow-[0_0_10px_rgba(168,85,247,0.8)]"></span>
                   </Button>
                 </header>
+                
+                {/* Daily Training - PRIMEIRO */}
+                <section>
+                  <DailyTraining />
+                </section>
+                
+                {/* Daily Goal */}
+                <section>
+                  <DailyGoalCard current={15} total={30} streak={currentStreak} />
+                </section>
+                
+                {/* Today's Challenge */}
+                <section>
+                  <ChallengeCard 
+                    title="Desbloquear Nova Música"
+                    description={`Complete ${nextUnlockable.length > 0 ? 'uma música já disponível' : 'os requisitos para desbloquear mais músicas'}`}
+                    xp={200}
+                  />
+                </section>
+                
+                {/* Continue Learning */}
+                <section>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-2xl font-bold text-white">Continue de onde parou</h2>
+                      <p className="text-sm text-gray-400 mt-1">Retome suas lições em andamento</p>
+                    </div>
+                    <button 
+                      onClick={() => setLocation('/chords')}
+                      className="text-sm text-[#06b6d4] font-semibold hover:text-[#22d3ee] transition-colors flex items-center gap-1"
+                    >
+                      <span>Ver tudo</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  <ContinueLearning lessons={continueLearningData} />
+                </section>
+                
+                {/* Training Modules */}
+                <section>
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-white mb-1">Treino de Hoje</h2>
+                    <p className="text-sm text-gray-400">Módulos de prática</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    {todayModules.map((module, index) => (
+                      <TrainingModule key={index} {...module} />
+                    ))}
+                  </div>
+                </section>
+                
+                {/* AI Assistant */}
+                <section>
+                  <AIAssistant />
+                </section>
                 
                 {/* Featured: Next Songs to Unlock */}
                 {nextUnlockable.length > 0 && (
@@ -495,63 +552,6 @@ export default function Home() {
                   </section>
                 )}
                 
-                {/* Daily Training */}
-                <section>
-                  <DailyTraining />
-                </section>
-                
-                {/* AI Assistant */}
-                <section>
-                  <AIAssistant />
-                </section>
-                
-                {/* Daily Goal */}
-                <section>
-                  <DailyGoalCard current={15} total={30} streak={currentStreak} />
-                </section>
-                
-                {/* Today's Challenge */}
-                <section>
-                  <ChallengeCard 
-                    title="Desbloquear Nova Música"
-                    description={`Complete ${nextUnlockable.length > 0 ? 'uma música já disponível' : 'os requisitos para desbloquear mais músicas'}`}
-                    xp={200}
-                  />
-                </section>
-                
-                {/* Continue Learning */}
-                <section>
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h2 className="text-2xl font-bold text-white">Continue de onde parou</h2>
-                      <p className="text-sm text-gray-400 mt-1">Retome suas lições em andamento</p>
-                    </div>
-                    <button 
-                      onClick={() => setLocation('/chords')}
-                      className="text-sm text-[#06b6d4] font-semibold hover:text-[#22d3ee] transition-colors flex items-center gap-1"
-                    >
-                      <span>Ver tudo</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                  
-                  <ContinueLearning lessons={continueLearningData} />
-                </section>
-                
-                {/* Training Modules */}
-                <section>
-                  <div className="mb-6">
-                    <h2 className="text-2xl font-bold text-white mb-1">Treino de Hoje</h2>
-                    <p className="text-sm text-gray-400">Módulos de prática</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                    {todayModules.map((module, index) => (
-                      <TrainingModule key={index} {...module} />
-                    ))}
-                  </div>
-                </section>
-                
                 {/* First Song Path */}
                 <section>
                   <FirstSongPath />
@@ -596,6 +596,65 @@ export default function Home() {
         </div>
 
         <main className={`px-4 py-4 pb-24 ${isCompactMode ? 'space-y-3' : 'space-y-4'}`}>
+          {/* Daily Training - PRIMEIRO */}
+          <section>
+            <DailyTraining />
+          </section>
+          
+          {/* Daily Goal */}
+          <section>
+            <DailyGoalCard current={15} total={30} streak={currentStreak} />
+          </section>
+          
+          {/* Challenge */}
+          <section>
+            <ChallengeCard 
+              title="Desbloquear Nova Música"
+              description={`Complete ${nextUnlockable.length > 0 ? 'uma música já disponível' : 'os requisitos para desbloquear mais músicas'}`}
+              xp={200}
+            />
+          </section>
+          
+          {/* Continue Learning */}
+          <section>
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-white mb-1">Continue de onde parou</h2>
+              <p className="text-sm text-gray-400">Retome suas lições</p>
+            </div>
+            
+            <ContinueLearning lessons={continueLearningData} />
+          </section>
+          
+          {/* Training Modules */}
+          <section>
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-white mb-1">Treino de Hoje</h2>
+              <p className="text-sm text-gray-400">Módulos</p>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-4">
+              {todayModules.map((module, index) => (
+                <TrainingModule key={index} {...module} />
+              ))}
+            </div>
+          </section>
+          
+          {/* AI Assistant */}
+          <section>
+            <AIAssistant />
+          </section>
+          
+          {/* Progressive Disclosure Dashboard */}
+          {layoutStyle === 'cards' && (
+            <ProgressiveDisclosure
+              items={dashboardItems}
+              initialVisible={isCompactMode ? 2 : 3}
+              showPriority={true}
+              showMetadata={true}
+              compact={isCompactMode}
+            />
+          )}
+          
           {/* Featured: Next Songs to Unlock */}
           {nextUnlockable.length > 0 && (
             <section>
@@ -635,17 +694,6 @@ export default function Home() {
               </div>
             </section>
           )}
-
-          {/* Progressive Disclosure Dashboard */}
-          {layoutStyle === 'cards' && (
-            <ProgressiveDisclosure
-              items={dashboardItems}
-              initialVisible={isCompactMode ? 2 : 3}
-              showPriority={true}
-              showMetadata={true}
-              compact={isCompactMode}
-            />
-          )}
           
           {/* Unlocked Songs */}
           {unlockedSongs.length > 0 && (
@@ -672,50 +720,7 @@ export default function Home() {
             </section>
           )}
           
-          {/* Daily Training */}
-          <section>
-            <DailyTraining />
-          </section>
-          
-          {/* AI Assistant */}
-          <section>
-            <AIAssistant />
-          </section>
-          
-          <section>
-            <DailyGoalCard current={15} total={30} streak={currentStreak} />
-          </section>
-          
-          <section>
-            <ChallengeCard 
-              title="Desbloquear Nova Música"
-              description={`Complete ${nextUnlockable.length > 0 ? 'uma música já disponível' : 'os requisitos para desbloquear mais músicas'}`}
-              xp={200}
-            />
-          </section>
-          
-          <section>
-            <div className="mb-4">
-              <h2 className="text-lg font-bold text-white mb-1">Continue de onde parou</h2>
-              <p className="text-sm text-gray-400">Retome suas lições</p>
-            </div>
-            
-            <ContinueLearning lessons={continueLearningData} />
-          </section>
-          
-          <section>
-            <div className="mb-4">
-              <h2 className="text-lg font-bold text-white mb-1">Treino de Hoje</h2>
-              <p className="text-sm text-gray-400">Módulos</p>
-            </div>
-            
-            <div className="grid grid-cols-1 gap-4">
-              {todayModules.map((module, index) => (
-                <TrainingModule key={index} {...module} />
-              ))}
-            </div>
-          </section>
-          
+          {/* First Song Path */}
           <section>
             <div className="relative overflow-hidden rounded-3xl p-6 backdrop-blur-xl bg-gradient-to-br from-[#8b5cf6]/20 via-[#a855f7]/10 to-transparent border border-[#8b5cf6]/40 shadow-[0_0_30px_rgba(139,92,246,0.3)]">
               <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-[#8b5cf6] via-[#a855f7] to-[#8b5cf6] opacity-10 blur-2xl"></div>
