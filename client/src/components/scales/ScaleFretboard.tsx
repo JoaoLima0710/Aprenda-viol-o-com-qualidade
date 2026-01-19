@@ -326,6 +326,13 @@ export function ScaleFretboard({ scaleName, scaleNotes, tonic, intervals }: Scal
   console.log('🎸 Scale:', scaleName, 'Root:', tonic, 'Intervals:', intervals);
   console.log('🎸 Scale positions calculated:', scalePattern);
   console.log('🎸 Pattern details:', scalePattern.map(p => `${p.sequence}: ${p.note} @ string ${p.string} fret ${p.fret}`));
+  
+  // Debug: mostrar se o padrão está vazio ou mal formado
+  if (scalePattern.length === 0) {
+    console.error('❌ ERRO: Nenhuma posição calculada!');
+  } else if (scalePattern.length < intervals.length) {
+    console.warn('⚠️ AVISO: Menos posições que notas na escala!', scalePattern.length, 'vs', intervals.length);
+  }
 
   // Função para tocar a escala com animação - CORRIGIDA
   const playScaleSequence = async () => {
