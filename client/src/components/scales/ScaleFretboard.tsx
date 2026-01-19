@@ -6,8 +6,8 @@ import { unifiedAudioService } from '@/services/UnifiedAudioService';
 import { toast } from 'sonner';
 
 /**
- * Calculate fretboard positions for any scale using a proper box pattern
- * This creates a didactically correct and technically sound scale pattern
+ * Calculate fretboard positions using traditional scale box pattern
+ * This creates a didactically correct ascending scale pattern
  */
 function calculateScalePositions(root: string, intervals: number[]): Array<{
   note: string;
@@ -28,25 +28,52 @@ function calculateScalePositions(root: string, intervals: number[]): Array<{
     return [];
   }
 
-  // Generate scale notes in order
+  // Generate scale notes in order (without octave return - we'll add it at the end in a logical position)
   const scaleNotes: string[] = [];
   intervals.forEach(interval => {
     const noteIndex = (rootIndex + interval) % 12;
     scaleNotes.push(NOTES[noteIndex]);
   });
-  // Add octave return
-  scaleNotes.push(rootNote);
 
   console.log('🎼 Scale notes for', root, ':', scaleNotes);
 
-  // Find starting position (root note) - prefer lower strings, lower frets
-  const startPosition = findRootPosition(rootNote, STRINGS, NOTES);
-  if (!startPosition) {
+  // Find root position on 6th string (low E) - traditional starting point
+  const rootFret = findFretOnString(rootNote, 5, STRINGS, NOTES); // String 5 = 6th string (low E)
+  
+  if (rootFret === null || rootFret > 8) {
+    // If root is too high on 6th string, try 5th string (A)
+    const rootFretA = findFretOnString(rootNote, 4, STRINGS, NOTES);
+    if (rootFretA !== null && rootFretA <= 8) {
+      return buildScalePattern(scaleNotes, rootNote, 4, rootFretA, STRINGS, NOTES);
+    }
+  }
+
+  if (rootFret === null) {
     console.error('Could not find starting position for root:', rootNote);
     return [];
   }
 
-  // Build scale pattern using box pattern logic
+  return buildScalePattern(scaleNotes, rootNote, 5, rootFret, STRINGS, NOTES);
+}
+
+/**
+ * Build scale pattern starting from a specific string and fret
+ * Uses traditional ascending pattern: move across strings, then up frets
+ */
+function buildScalePattern(
+  scaleNotes: string[],
+  rootNote: string,
+  startString: number,
+  startFret: number,
+  STRINGS: string[],
+  NOTES: string[]
+): Array<{
+  note: string;
+  string: number;
+  fret: number;
+  sequence: number;
+  color: string;
+}> {
   const positions: Array<{
     note: string;
     string: number;
@@ -55,61 +82,170 @@ function calculateScalePositions(root: string, intervals: number[]): Array<{
     color: string;
   }> = [];
 
+  const usedPositions = new Set<string>();
+  let currentString = startString;
+  let currentFret = startFret;
+
   // Add root note as first position
   positions.push({
     note: rootNote,
-    string: startPosition.string,
-    fret: startPosition.fret,
+    string: currentString,
+    fret: currentFret,
     sequence: 1,
     color: NOTE_COLORS[0]
   });
-
-  // Build the rest of the scale following a logical pattern
-  // Strategy: Move across strings and up/down frets in a natural way
-  let currentString = startPosition.string;
-  let currentFret = startPosition.fret;
-  const usedPositions = new Set<string>();
   usedPositions.add(`${currentString}-${currentFret}`);
 
-  // For each scale note (skip first, already added)
+  // Build the rest of the scale following ascending pattern
+  // Strategy: Always move forward (ascending), prefer same string, then next string
   for (let i = 1; i < scaleNotes.length; i++) {
     const targetNote = scaleNotes[i];
-    const position = findNextLogicalPosition(
-      targetNote,
-      currentString,
-      currentFret,
-      usedPositions,
-      STRINGS,
-      NOTES,
-      positions
-    );
+    let found = false;
 
-    if (position) {
-      positions.push({
-        note: targetNote,
-        string: position.string,
-        fret: position.fret,
-        sequence: i + 1,
-        color: NOTE_COLORS[i % NOTE_COLORS.length]
-      });
+    // Priority 1: Same string, next frets (ascending)
+    for (let fretOffset = 1; fretOffset <= 4; fretOffset++) {
+      const testFret = currentFret + fretOffset;
+      if (testFret <= 8 && getNoteAtPosition(currentString, testFret, STRINGS, NOTES) === targetNote) {
+        const key = `${currentString}-${testFret}`;
+        if (!usedPositions.has(key)) {
+          positions.push({
+            note: targetNote,
+            string: currentString,
+            fret: testFret,
+            sequence: i + 1,
+            color: NOTE_COLORS[i % NOTE_COLORS.length]
+          });
+          usedPositions.add(key);
+          currentFret = testFret;
+          found = true;
+          break;
+        }
+      }
+    }
 
-      currentString = position.string;
-      currentFret = position.fret;
-      usedPositions.add(`${position.string}-${position.fret}`);
-    } else {
-      // Fallback: find any available position
-      const fallback = findAnyPosition(targetNote, usedPositions, STRINGS, NOTES);
-      if (fallback) {
+    // Priority 2: Next string (higher pitch), frets similar or slightly lower
+    if (!found && currentString > 0) {
+      const nextString = currentString - 1; // Move to higher string (ascending pitch)
+      
+      // Try frets from currentFret-2 to currentFret+2 (keep it close)
+      for (let fretOffset = -2; fretOffset <= 2; fretOffset++) {
+        const testFret = currentFret + fretOffset;
+        if (testFret < 0 || testFret > 8) continue;
+
+        if (getNoteAtPosition(nextString, testFret, STRINGS, NOTES) === targetNote) {
+          const key = `${nextString}-${testFret}`;
+          if (!usedPositions.has(key)) {
+            positions.push({
+              note: targetNote,
+              string: nextString,
+              fret: testFret,
+              sequence: i + 1,
+              color: NOTE_COLORS[i % NOTE_COLORS.length]
+            });
+            usedPositions.add(key);
+            currentString = nextString;
+            currentFret = testFret;
+            found = true;
+            break;
+          }
+        }
+      }
+    }
+
+    // Priority 3: Same string, earlier frets (if note repeats)
+    if (!found) {
+      for (let fretOffset = -4; fretOffset < 0; fretOffset++) {
+        const testFret = currentFret + fretOffset;
+        if (testFret < 0 || testFret > 8) continue;
+
+        if (getNoteAtPosition(currentString, testFret, STRINGS, NOTES) === targetNote) {
+          const key = `${currentString}-${testFret}`;
+          if (!usedPositions.has(key)) {
+            positions.push({
+              note: targetNote,
+              string: currentString,
+              fret: testFret,
+              sequence: i + 1,
+              color: NOTE_COLORS[i % NOTE_COLORS.length]
+            });
+            usedPositions.add(key);
+            currentFret = testFret;
+            found = true;
+            break;
+          }
+        }
+      }
+    }
+
+    // Priority 4: Any available position (fallback)
+    if (!found) {
+      // Search from current position outward
+      for (let stringOffset = 0; stringOffset < STRINGS.length; stringOffset++) {
+        for (let s = Math.max(0, currentString - stringOffset); s <= Math.min(STRINGS.length - 1, currentString + stringOffset); s++) {
+          for (let f = 0; f <= 8; f++) {
+            if (getNoteAtPosition(s, f, STRINGS, NOTES) === targetNote) {
+              const key = `${s}-${f}`;
+              if (!usedPositions.has(key)) {
+                positions.push({
+                  note: targetNote,
+                  string: s,
+                  fret: f,
+                  sequence: i + 1,
+                  color: NOTE_COLORS[i % NOTE_COLORS.length]
+                });
+                usedPositions.add(key);
+                currentString = s;
+                currentFret = f;
+                found = true;
+                break;
+              }
+            }
+          }
+          if (found) break;
+        }
+        if (found) break;
+      }
+    }
+  }
+
+  // Add octave return (root note one octave higher) at the end
+  // Try to find it on a higher string (ascending) or same string, higher fret
+  let octaveAdded = false;
+  
+  // Try higher string first
+  if (currentString > 0) {
+    const octaveFret = findFretOnString(rootNote, currentString - 1, STRINGS, NOTES);
+    if (octaveFret !== null && octaveFret <= 8) {
+      const key = `${currentString - 1}-${octaveFret}`;
+      if (!usedPositions.has(key)) {
         positions.push({
-          note: targetNote,
-          string: fallback.string,
-          fret: fallback.fret,
-          sequence: i + 1,
-          color: NOTE_COLORS[i % NOTE_COLORS.length]
+          note: rootNote,
+          string: currentString - 1,
+          fret: octaveFret,
+          sequence: scaleNotes.length + 1,
+          color: NOTE_COLORS[0] // Same color as first root
         });
-        currentString = fallback.string;
-        currentFret = fallback.fret;
-        usedPositions.add(`${fallback.string}-${fallback.fret}`);
+        octaveAdded = true;
+      }
+    }
+  }
+  
+  // If not found, try same string, higher fret
+  if (!octaveAdded && currentFret < 8) {
+    for (let f = currentFret + 1; f <= 8; f++) {
+      if (getNoteAtPosition(currentString, f, STRINGS, NOTES) === rootNote) {
+        const key = `${currentString}-${f}`;
+        if (!usedPositions.has(key)) {
+          positions.push({
+            note: rootNote,
+            string: currentString,
+            fret: f,
+            sequence: scaleNotes.length + 1,
+            color: NOTE_COLORS[0]
+          });
+          octaveAdded = true;
+          break;
+        }
       }
     }
   }
@@ -118,165 +254,47 @@ function calculateScalePositions(root: string, intervals: number[]): Array<{
 }
 
 /**
- * Find root position - prefer lower strings (5th or 6th), lower frets (0-5)
+ * Get note at a specific string and fret position
  */
-function findRootPosition(rootNote: string, STRINGS: string[], NOTES: string[]): { string: number; fret: number } | null {
-  // Try 6th string (low E) first - most common starting position
-  for (let stringIndex = 5; stringIndex >= 0; stringIndex--) {
-    const stringNote = STRINGS[stringIndex];
-    const stringRootIndex = NOTES.indexOf(stringNote);
-    const targetIndex = NOTES.indexOf(rootNote);
+function getNoteAtPosition(stringIndex: number, fret: number, STRINGS: string[], NOTES: string[]): string | null {
+  if (stringIndex < 0 || stringIndex >= STRINGS.length) return null;
+  
+  const stringNote = STRINGS[stringIndex];
+  const stringRootIndex = NOTES.indexOf(stringNote);
+  if (stringRootIndex === -1) return null;
 
-    if (stringRootIndex !== -1 && targetIndex !== -1) {
-      let fret = (targetIndex - stringRootIndex + 12) % 12;
-      
-      // Prefer open position or lower frets (0-5)
-      if (fret <= 5) {
-        return { string: stringIndex, fret };
-      }
-      
-      // Also try octave down (12 frets lower)
-      const fretLower = fret - 12;
-      if (fretLower >= 0 && fretLower <= 5) {
-        return { string: stringIndex, fret: fretLower };
-      }
-    }
+  const noteIndex = (stringRootIndex + fret) % 12;
+  return NOTES[noteIndex];
+}
+
+/**
+ * Find fret position of a note on a specific string
+ */
+function findFretOnString(note: string, stringIndex: number, STRINGS: string[], NOTES: string[]): number | null {
+  if (stringIndex < 0 || stringIndex >= STRINGS.length) return null;
+  
+  const stringNote = STRINGS[stringIndex];
+  const stringRootIndex = NOTES.indexOf(stringNote);
+  const targetIndex = NOTES.indexOf(note);
+
+  if (stringRootIndex === -1 || targetIndex === -1) return null;
+
+  let fret = (targetIndex - stringRootIndex + 12) % 12;
+  
+  // Prefer lower frets (0-8)
+  if (fret <= 8) {
+    return fret;
   }
-
-  // Fallback: any position
-  for (let stringIndex = 5; stringIndex >= 0; stringIndex--) {
-    const stringNote = STRINGS[stringIndex];
-    const stringRootIndex = NOTES.indexOf(stringNote);
-    const targetIndex = NOTES.indexOf(rootNote);
-
-    if (stringRootIndex !== -1 && targetIndex !== -1) {
-      const fret = (targetIndex - stringRootIndex + 12) % 12;
-      if (fret <= 12) {
-        return { string: stringIndex, fret };
-      }
-    }
+  
+  // Try octave down
+  const fretLower = fret - 12;
+  if (fretLower >= 0 && fretLower <= 8) {
+    return fretLower;
   }
 
   return null;
 }
 
-/**
- * Find next logical position - prefer moving to adjacent strings, similar frets
- */
-function findNextLogicalPosition(
-  targetNote: string,
-  currentString: number,
-  currentFret: number,
-  usedPositions: Set<string>,
-  STRINGS: string[],
-  NOTES: string[],
-  existingPositions: any[]
-): { string: number; fret: number } | null {
-  const targetIndex = NOTES.indexOf(targetNote);
-  if (targetIndex === -1) return null;
-
-  const candidates: Array<{ string: number; fret: number; score: number }> = [];
-
-  // Check adjacent strings first (prefer moving to next string)
-  for (let offset = -1; offset <= 1; offset++) {
-    const stringIndex = currentString + offset;
-    if (stringIndex < 0 || stringIndex >= STRINGS.length) continue;
-
-    const stringNote = STRINGS[stringIndex];
-    const stringRootIndex = NOTES.indexOf(stringNote);
-    if (stringRootIndex === -1) continue;
-
-    let fret = (targetIndex - stringRootIndex + 12) % 12;
-    const key = `${stringIndex}-${fret}`;
-
-    if (usedPositions.has(key)) continue;
-
-    // Calculate score: prefer positions close to current fret, on adjacent strings
-    let score = 100;
-    
-    // Prefer moving to next string (ascending)
-    if (offset === 1) score += 30;
-    else if (offset === 0) score += 10; // Same string
-    else score += 5; // Previous string
-
-    // Prefer frets close to current (within 4 frets)
-    const fretDistance = Math.abs(fret - currentFret);
-    if (fretDistance <= 2) score += 40;
-    else if (fretDistance <= 4) score += 20;
-    else if (fretDistance <= 6) score += 10;
-    else score -= 20;
-
-    // Prefer lower frets (0-8)
-    if (fret <= 8) score += 15;
-    else if (fret <= 12) score += 5;
-    else score -= 10;
-
-    // Prefer ascending pattern (fret should be >= current or slightly lower)
-    if (fret >= currentFret - 2) score += 20;
-
-    candidates.push({ string: stringIndex, fret, score });
-  }
-
-  // Also check octave positions
-  for (let stringIndex = 0; stringIndex < STRINGS.length; stringIndex++) {
-    const stringNote = STRINGS[stringIndex];
-    const stringRootIndex = NOTES.indexOf(stringNote);
-    if (stringRootIndex === -1) continue;
-
-    let fret = (targetIndex - stringRootIndex + 12) % 12;
-    const fretOctave = fret + 12;
-    const key = `${stringIndex}-${fretOctave}`;
-
-    if (!usedPositions.has(key) && fretOctave <= 12) {
-      let score = 50;
-      const stringDistance = Math.abs(stringIndex - currentString);
-      if (stringDistance <= 1) score += 20;
-      if (fretOctave <= 8) score += 10;
-      candidates.push({ string: stringIndex, fret: fretOctave, score });
-    }
-  }
-
-  if (candidates.length === 0) return null;
-
-  // Sort by score and return best
-  candidates.sort((a, b) => b.score - a.score);
-  return { string: candidates[0].string, fret: candidates[0].fret };
-}
-
-/**
- * Fallback: find any available position for a note
- */
-function findAnyPosition(
-  targetNote: string,
-  usedPositions: Set<string>,
-  STRINGS: string[],
-  NOTES: string[]
-): { string: number; fret: number } | null {
-  const targetIndex = NOTES.indexOf(targetNote);
-  if (targetIndex === -1) return null;
-
-  for (let stringIndex = 0; stringIndex < STRINGS.length; stringIndex++) {
-    const stringNote = STRINGS[stringIndex];
-    const stringRootIndex = NOTES.indexOf(stringNote);
-    if (stringRootIndex === -1) continue;
-
-    let fret = (targetIndex - stringRootIndex + 12) % 12;
-    const key = `${stringIndex}-${fret}`;
-
-    if (!usedPositions.has(key) && fret <= 12) {
-      return { string: stringIndex, fret };
-    }
-
-    // Try octave
-    const fretOctave = fret + 12;
-    const keyOctave = `${stringIndex}-${fretOctave}`;
-    if (!usedPositions.has(keyOctave) && fretOctave <= 12) {
-      return { string: stringIndex, fret: fretOctave };
-    }
-  }
-
-  return null;
-}
 
 interface ScaleFretboardProps {
   scaleName: string;
