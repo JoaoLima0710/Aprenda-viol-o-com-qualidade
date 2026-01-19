@@ -421,22 +421,6 @@ export default function Scales() {
                   intervals={selectedScale.intervals}
                 />
                 
-                {/* Diagrama Didático (posição específica) */}
-                <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1a1a2e]/80 to-[#2a2a3e]/60 border border-white/20 shadow-xl">
-                  <h2 className="text-2xl font-bold text-white mb-4">{selectedScale.name} - Posição Recomendada</h2>
-                  <p className="text-gray-400 mb-6">{selectedScale.description}</p>
-                  
-                  <ScaleFretboard
-                    scaleName={selectedScale.name}
-                    scaleNotes={selectedScale.intervals.map((interval, i) => {
-                      const rootIndex = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(selectedScale.root);
-                      const noteIndex = (rootIndex + interval) % 12;
-                      return ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'][noteIndex];
-                    })}
-                    tonic={selectedScale.root}
-                    intervals={selectedScale.intervals}
-                  />
-                </div>
               </div>
             )}
 
