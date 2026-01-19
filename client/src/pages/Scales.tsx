@@ -6,8 +6,13 @@ import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
 import { Button } from '@/components/ui/button';
 import { ScaleFretboard } from '@/components/scales/ScaleFretboard';
 import { ScalePractice } from '@/components/scales/ScalePractice';
+import { IntervalTheory } from '@/components/scales/IntervalTheory';
+import { ScaleShapes } from '@/components/scales/ScaleShapes';
+import { EarTraining } from '@/components/scales/EarTraining';
+import { ScaleImprovisation } from '@/components/scales/ScaleImprovisation';
+import { FullFretboardView } from '@/components/scales/FullFretboardView';
 import { useGamificationStore } from '@/stores/useGamificationStore';
-import { Play, Volume2, StopCircle } from 'lucide-react';
+import { Play, Volume2, StopCircle, BookOpen, Layers, Mic, Radio, GraduationCap } from 'lucide-react';
 import { unifiedAudioService } from '@/services/UnifiedAudioService';
 import { useAudioSettingsStore } from '@/stores/useAudioSettingsStore';
 import { useScaleProgressionStore } from '@/stores/useScaleProgressionStore';
@@ -145,10 +150,23 @@ const scales = [
   },
 ];
 
+type LearningStep = 'intervals' | 'theory' | 'shapes' | 'fretboard' | 'practice' | 'ear' | 'improvisation';
+
+const LEARNING_STEPS: { id: LearningStep; name: string; icon: any; description: string }[] = [
+  { id: 'intervals', name: 'Intervalos', icon: BookOpen, description: 'Fundação: aprenda intervalos primeiro' },
+  { id: 'theory', name: 'Teoria', icon: GraduationCap, description: 'Entenda como a escala é construída' },
+  { id: 'shapes', name: 'Formas', icon: Layers, description: 'CAGED, 3NPS e diferentes posições' },
+  { id: 'fretboard', name: 'Diagrama', icon: Play, description: 'Visualize no braço do violão' },
+  { id: 'practice', name: 'Prática', icon: Play, description: 'Treine com padrões multidirecionais' },
+  { id: 'ear', name: 'Ear Training', icon: Mic, description: 'Cante e reconheça graus da escala' },
+  { id: 'improvisation', name: 'Improvisação', icon: Radio, description: 'Aplique em contexto musical' },
+];
+
 export default function Scales() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [selectedScale, setSelectedScale] = useState(scales[0]);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentStep, setCurrentStep] = useState<LearningStep>('fretboard');
   
   const { xp, level, xpToNextLevel, currentStreak, addXP } = useGamificationStore();
   const { isScaleUnlocked, isScaleMastered, getScaleProgress, getStats } = useScaleProgressionStore();
@@ -289,146 +307,169 @@ export default function Scales() {
             </div>
           )}
 
-          {/* Selected Scale Details */}
-          <div className="grid lg:grid-cols-2 gap-8">
-            {/* Left: Fretboard Diagram */}
-            <div className="space-y-4">
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1a1a2e]/80 to-[#2a2a3e]/60 border border-white/20 shadow-xl">
+          {/* Learning Path Navigation */}
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1a1a2e]/80 to-[#2a2a3e]/60 border border-white/20 shadow-xl">
+            <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+              <GraduationCap className="w-6 h-6 text-cyan-400" />
+              <span>Caminho de Aprendizado</span>
+            </h2>
+            <p className="text-gray-400 mb-6">
+              Siga esta sequência pedagógica baseada em r/guitarlessons para aprender escalas de forma eficaz
+            </p>
+            
+            <div className="flex flex-wrap gap-3">
+              {LEARNING_STEPS.map((step) => {
+                const Icon = step.icon;
+                return (
+                  <Button
+                    key={step.id}
+                    onClick={() => setCurrentStep(step.id)}
+                    variant={currentStep === step.id ? 'default' : 'outline'}
+                    className={currentStep === step.id
+                      ? 'bg-gradient-to-r from-cyan-500 to-blue-500'
+                      : 'bg-white/5 border-white/10 hover:border-cyan-400/50'
+                    }
+                  >
+                    <Icon className="w-4 h-4 mr-2" />
+                    {step.name}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Selected Scale Details - Baseado no Step Atual */}
+          <div className="space-y-8">
+            {/* Step 1: Intervalos */}
+            {currentStep === 'intervals' && (
+              <IntervalTheory rootNote={selectedScale.root} />
+            )}
+
+            {/* Step 2: Teoria */}
+            {currentStep === 'theory' && (
+              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1a1a2e]/80 to-[#2a2a3e]/60 border border-white/20">
                 <h2 className="text-2xl font-bold text-white mb-4">{selectedScale.name}</h2>
                 <p className="text-gray-400 mb-6">{selectedScale.description}</p>
                 
-                <ScaleFretboard
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="p-4 rounded-xl bg-white/5">
+                    <h3 className="text-lg font-bold text-white mb-3">Fórmula de Intervalos</h3>
+                    <div className="space-y-2">
+                      {selectedScale.intervals.map((interval, i) => {
+                        const intervalNames = ['Tônica', '2ª', '3ª', '4ª', '5ª', '6ª', '7ª'];
+                        return (
+                          <div key={i} className="flex items-center justify-between">
+                            <span className="text-gray-300">Grau {i + 1}: {intervalNames[i] || `${interval} semitons`}</span>
+                            <span className="text-cyan-400 font-mono">{interval} semitons</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 rounded-xl bg-white/5">
+                    <h3 className="text-lg font-bold text-white mb-3">Notas da Escala</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedScale.intervals.map((interval, i) => {
+                        const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                        const rootIndex = NOTES.indexOf(selectedScale.root);
+                        const noteIndex = (rootIndex + interval) % 12;
+                        const note = NOTES[noteIndex];
+                        return (
+                          <span key={i} className="px-3 py-2 rounded-lg bg-cyan-500/20 text-cyan-400 font-bold">
+                            {note}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Formas */}
+            {currentStep === 'shapes' && (
+              <ScaleShapes
+                scaleName={selectedScale.name}
+                root={selectedScale.root}
+                intervals={selectedScale.intervals}
+              />
+            )}
+
+            {/* Step 4: Diagrama do Braço */}
+            {currentStep === 'fretboard' && (
+              <div className="space-y-6">
+                {/* Visualização Completa do Braço (inspirado em f2k.mjgibson.com) */}
+                <FullFretboardView
                   scaleName={selectedScale.name}
-                  scaleNotes={selectedScale.intervals.map((interval, i) => {
-                    const rootIndex = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(selectedScale.root);
-                    const noteIndex = (rootIndex + interval) % 12;
-                    return ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'][noteIndex];
-                  })}
-                  tonic={selectedScale.root}
+                  root={selectedScale.root}
                   intervals={selectedScale.intervals}
                 />
-              </div>
-            </div>
-
-            {/* Right: Controls and Info */}
-            <div className="space-y-4">
-              {/* Audio Controls */}
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1a1a2e]/80 to-[#2a2a3e]/60 border border-white/20 shadow-xl">
-                <h3 className="text-xl font-bold text-white mb-4">Controles de Áudio</h3>
                 
-                <div className="flex gap-3">
-                  {!isPlaying ? (
-                    <Button
-                      onClick={handlePlayScale}
-                      className="flex-1 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] hover:from-[#0891b2] hover:to-[#06b6d4] text-white font-semibold py-6 text-lg"
-                    >
-                      <Play className="mr-2" size={24} />
-                      Ouvir Escala
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={handleStopScale}
-                      className="flex-1 bg-gradient-to-r from-[#ef4444] to-[#dc2626] hover:from-[#dc2626] hover:to-[#ef4444] text-white font-semibold py-6 text-lg"
-                    >
-                      <StopCircle className="mr-2" size={24} />
-                      Parar
-                    </Button>
-                  )}
-                </div>
-
-                {isPlaying && (
-                  <div className="mt-4 flex items-center gap-3 text-cyan-400">
-                    <Volume2 className="animate-pulse" size={20} />
-                    <span className="text-sm font-semibold">Tocando escala...</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Scale Info */}
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1a1a2e]/80 to-[#2a2a3e]/60 border border-white/20 shadow-xl">
-                <h3 className="text-xl font-bold text-white mb-4">Informações</h3>
-                
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-gray-400">Tônica:</span>
-                    <span className="text-white font-semibold text-lg">{selectedScale.root}</span>
-                  </div>
+                {/* Diagrama Didático (posição específica) */}
+                <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1a1a2e]/80 to-[#2a2a3e]/60 border border-white/20 shadow-xl">
+                  <h2 className="text-2xl font-bold text-white mb-4">{selectedScale.name} - Posição Recomendada</h2>
+                  <p className="text-gray-400 mb-6">{selectedScale.description}</p>
                   
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-gray-400">Número de Notas:</span>
-                    <span className="text-white font-semibold">{selectedScale.intervals.length}</span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-gray-400">Dificuldade:</span>
-                    <span className={`font-semibold capitalize ${
-                      selectedScale.difficulty === 'beginner' ? 'text-green-400' :
-                      selectedScale.difficulty === 'intermediate' ? 'text-yellow-400' :
-                      'text-red-400'
-                    }`}>
-                      {selectedScale.difficulty === 'beginner' ? 'Iniciante' :
-                       selectedScale.difficulty === 'intermediate' ? 'Intermediário' :
-                       'Avançado'}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-gray-400">Intervalos:</span>
-                    <span className="text-white font-mono text-sm">
-                      {selectedScale.intervals.join(' - ')}
-                    </span>
-                  </div>
+                  <ScaleFretboard
+                    scaleName={selectedScale.name}
+                    scaleNotes={selectedScale.intervals.map((interval, i) => {
+                      const rootIndex = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(selectedScale.root);
+                      const noteIndex = (rootIndex + interval) % 12;
+                      return ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'][noteIndex];
+                    })}
+                    tonic={selectedScale.root}
+                    intervals={selectedScale.intervals}
+                  />
                 </div>
               </div>
+            )}
 
-              {/* Practice Tips */}
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#8b5cf6]/20 to-[#6d28d9]/10 border border-[#8b5cf6]/30 shadow-xl">
-                <h3 className="text-xl font-bold text-white mb-3">💡 Dicas de Prática</h3>
-                <ul className="space-y-2 text-sm text-gray-300">
-                  <li className="flex items-start gap-2">
-                    <span className="text-purple-400 mt-0.5">•</span>
-                    <span>Comece devagar e aumente a velocidade gradualmente</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-purple-400 mt-0.5">•</span>
-                    <span>Pratique subindo e descendo a escala</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-purple-400 mt-0.5">•</span>
-                    <span>Use um metrônomo para manter o tempo</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-purple-400 mt-0.5">•</span>
-                    <span>Memorize as posições das notas no braço</span>
-                  </li>
-                </ul>
+            {/* Step 5: Prática */}
+            {currentStep === 'practice' && (
+              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1a1a2e]/80 to-[#2a2a3e]/60 border border-white/20">
+                <h2 className="text-2xl font-bold text-white mb-4">🎸 Treino Interativo</h2>
+                <p className="text-gray-400 mb-6">Pratique a escala com feedback em tempo real usando seu violão</p>
+                
+                <ScalePractice 
+                  scale={{
+                    id: selectedScale.id,
+                    name: selectedScale.name,
+                    notes: selectedScale.intervals.map((interval, i) => {
+                      const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                      const rootIndex = notes.indexOf(selectedScale.root);
+                      const noteIndex = (rootIndex + interval) % 12;
+                      return notes[noteIndex];
+                    }),
+                    intervals: selectedScale.intervals.map(i => i.toString()),
+                    fretPositions: [],
+                  }}
+                  onComplete={() => {
+                    addXP(50);
+                  }}
+                />
               </div>
-            </div>
+            )}
+
+            {/* Step 6: Ear Training */}
+            {currentStep === 'ear' && (
+              <EarTraining
+                scaleName={selectedScale.name}
+                root={selectedScale.root}
+                intervals={selectedScale.intervals}
+              />
+            )}
+
+            {/* Step 7: Improvisação */}
+            {currentStep === 'improvisation' && (
+              <ScaleImprovisation
+                scaleName={selectedScale.name}
+                root={selectedScale.root}
+                intervals={selectedScale.intervals}
+              />
+            )}
           </div>
 
-          {/* Scale Practice Section */}
-          <div className="mt-8 p-8 rounded-2xl bg-gradient-to-br from-[#1a1a2e]/80 to-[#2a2a3e]/60 border border-white/20 shadow-xl">
-            <h2 className="text-2xl font-bold text-white mb-2">🎸 Treino Interativo</h2>
-            <p className="text-gray-400 mb-6">Pratique a escala com feedback em tempo real usando seu violão</p>
-            
-            <ScalePractice 
-              scale={{
-                id: selectedScale.id,
-                name: selectedScale.name,
-                notes: selectedScale.intervals.map((interval, i) => {
-                  const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-                  const rootIndex = notes.indexOf(selectedScale.root);
-                  const noteIndex = (rootIndex + interval) % 12;
-                  return notes[noteIndex];
-                }),
-                intervals: selectedScale.intervals.map(i => i.toString()),
-                fretPositions: [],
-              }}
-              onComplete={() => {
-                addXP(50);
-              }}
-            />
-          </div>
         </div>
       </main>
 
