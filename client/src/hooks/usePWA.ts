@@ -188,5 +188,6 @@ export function usePWA() {
     installApp,
     checkForUpdates,
     deviceInfo,
+    registration, // Expor registration para o UpdateBanner
   };
 }
