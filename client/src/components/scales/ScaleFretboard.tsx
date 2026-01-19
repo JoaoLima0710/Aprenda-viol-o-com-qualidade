@@ -322,9 +322,10 @@ export function ScaleFretboard({ scaleName, scaleNotes, tonic, intervals }: Scal
   // Calcular posições dinâmicas da escala
   const scalePattern = calculateScalePositions(tonic, intervals);
 
-  console.log('🎸 ScaleFretboard - NEW VERSION LOADED');
+  console.log('🎸 ScaleFretboard - VERSION 3.0 LOADED - COMPLETE REWRITE');
   console.log('🎸 Scale:', scaleName, 'Root:', tonic, 'Intervals:', intervals);
   console.log('🎸 Scale positions calculated:', scalePattern);
+  console.log('🎸 Pattern details:', scalePattern.map(p => `${p.sequence}: ${p.note} @ string ${p.string} fret ${p.fret}`));
 
   // Função para tocar a escala com animação - CORRIGIDA
   const playScaleSequence = async () => {
@@ -386,8 +387,8 @@ export function ScaleFretboard({ scaleName, scaleNotes, tonic, intervals }: Scal
           <h3 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3 mb-2">
             <span className="text-4xl">🎸</span>
             <span>Diagrama da Escala</span>
-            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full border border-green-500/30">
-              v2.0
+            <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full border border-red-500/30 animate-pulse">
+              v3.0 - TESTE
             </span>
           </h3>
           <p className="text-sm md:text-base text-gray-400">
