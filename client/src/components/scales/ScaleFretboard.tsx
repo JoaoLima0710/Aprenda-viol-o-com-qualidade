@@ -322,7 +322,10 @@ export function ScaleFretboard({ scaleName, scaleNotes, tonic, intervals }: Scal
   // Calcular posições dinâmicas da escala
   const scalePattern = calculateScalePositions(tonic, intervals);
 
-  console.log('🎸 ScaleFretboard - VERSION 3.0 LOADED - COMPLETE REWRITE');
+  // ============================================
+  // 🎸 VERSÃO 3.0 - COMPLETE REWRITE 🎸
+  // ============================================
+  console.log('%c🎸 ScaleFretboard - VERSION 3.0 LOADED - COMPLETE REWRITE', 'color: #10b981; font-size: 16px; font-weight: bold;');
   console.log('🎸 Scale:', scaleName, 'Root:', tonic, 'Intervals:', intervals);
   console.log('🎸 Scale positions calculated:', scalePattern);
   console.log('🎸 Pattern details:', scalePattern.map(p => `${p.sequence}: ${p.note} @ string ${p.string} fret ${p.fret}`));
@@ -332,6 +335,12 @@ export function ScaleFretboard({ scaleName, scaleNotes, tonic, intervals }: Scal
     console.error('❌ ERRO: Nenhuma posição calculada!');
   } else if (scalePattern.length < intervals.length) {
     console.warn('⚠️ AVISO: Menos posições que notas na escala!', scalePattern.length, 'vs', intervals.length);
+  }
+  
+  // Validar que todos os frets estão dentro do range 0-8
+  const invalidPositions = scalePattern.filter(p => p.fret < 0 || p.fret > 8);
+  if (invalidPositions.length > 0) {
+    console.error('❌ ERRO: Posições inválidas encontradas!', invalidPositions);
   }
 
   // Função para tocar a escala com animação - CORRIGIDA
