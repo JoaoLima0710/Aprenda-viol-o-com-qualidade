@@ -15,6 +15,7 @@ import { Play, Check, StopCircle } from 'lucide-react';
 import { unifiedAudioService } from '@/services/UnifiedAudioService';
 import { useAudioSettingsStore } from '@/stores/useAudioSettingsStore';
 import type { InstrumentType } from '@/services/AudioServiceWithSamples';
+import { RealtimeAudioFeedback } from '@/components/audio/RealtimeAudioFeedback';
 
 export default function Chords() {
   const [, setLocation] = useLocation();
@@ -318,6 +319,17 @@ export default function Chords() {
                         >
                           Praticar
                         </Button>
+                      </div>
+                      
+                      {/* Feedback de Áudio em Tempo Real */}
+                      <div className="mt-6">
+                        <RealtimeAudioFeedback
+                          practiceType="chord"
+                          target={selectedChord.name}
+                          difficulty={selectedChord.difficulty === 'beginner' ? 'beginner' : selectedChord.difficulty === 'intermediate' ? 'intermediate' : 'advanced'}
+                          showControls={true}
+                          showDetailedFeedback={true}
+                        />
                       </div>
                     </div>
                   </div>

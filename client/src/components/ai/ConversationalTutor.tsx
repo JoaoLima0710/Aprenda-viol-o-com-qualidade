@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -14,13 +14,21 @@ import {
   Clock,
   CheckCircle2,
   AlertTriangle,
-  Sparkles
+  Sparkles,
+  Mic,
+  MicOff,
+  Music,
+  AlertCircle,
+  Volume2
 } from 'lucide-react';
 import { advancedAIService, LLMResponse, ConversationContext } from '@/services/AdvancedAIService';
 import { llmIntegrationService, SentimentAnalysis } from '@/services/LLMIntegrationService';
 import { aiGamificationService } from '@/services/AIGamificationService';
 import { useGamificationStore } from '@/stores/useGamificationStore';
 import { aiAssistantService } from '@/services/AIAssistantService';
+import { realtimeAIFeedbackService, RealtimeFeedback, PracticeContext, PlayingError } from '@/services/RealtimeAIFeedbackService';
+import { AITutorAudioFeedback } from '@/components/audio/AITutorAudioFeedback';
+import { aiAudioTutorService, AITutorFeedback } from '@/services/AIAudioTutorService';
 
 interface Message {
   id: string;
@@ -49,7 +57,106 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Estados para feedback de áudio em tempo real
+  const [isAudioListening, setIsAudioListening] = useState(false);
+  const [isAudioInitializing, setIsAudioInitializing] = useState(false);
+  const [currentFeedback, setCurrentFeedback] = useState<RealtimeFeedback | null>(null);
+  const [practiceTarget, setPracticeTarget] = useState<string>('C'); // Acorde ou nota alvo
+  const [practiceType, setPracticeType] = useState<'chord' | 'scale' | 'note'>('chord');
+  const [showAudioPanel, setShowAudioPanel] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
+
   const { xp, level } = useGamificationStore();
+
+  // Iniciar/parar captação de áudio
+  const toggleAudioListening = useCallback(async () => {
+    if (isAudioListening) {
+      realtimeAIFeedbackService.stopAnalysis();
+      setIsAudioListening(false);
+      setCurrentFeedback(null);
+      
+      // Mensagem de resumo ao parar
+      const summary = realtimeAIFeedbackService.getSessionSummary();
+      if (summary.totalDetections > 0) {
+        const summaryMessage: Message = {
+          id: `summary_${Date.now()}`,
+          role: 'assistant',
+          content: `📊 **Resumo da sua sessão de prática:**\n\n` +
+            `• Total de notas detectadas: ${summary.totalDetections}\n` +
+            `• Qualidade média: ${summary.averageQuality}%\n` +
+            (summary.commonErrors.length > 0 
+              ? `• Erros mais comuns: ${summary.commonErrors.join(', ')}\n` 
+              : '• Sem erros frequentes!\n') +
+            (summary.recommendations.length > 0
+              ? `\n💡 **Recomendações:**\n${summary.recommendations.map(r => `• ${r}`).join('\n')}`
+              : '\n🌟 Continue assim!'),
+          timestamp: Date.now(),
+          confidence: 1.0
+        };
+        setMessages(prev => [...prev, summaryMessage]);
+      }
+    } else {
+      setIsAudioInitializing(true);
+      setAudioError(null);
+      
+      try {
+        const initialized = await realtimeAIFeedbackService.initialize();
+        if (initialized) {
+          const context: PracticeContext = {
+            type: practiceType,
+            target: practiceTarget,
+            difficulty: level < 5 ? 'beginner' : level < 15 ? 'intermediate' : 'advanced'
+          };
+          
+          realtimeAIFeedbackService.startAnalysis(context, (feedback) => {
+            setCurrentFeedback(feedback);
+            
+            // Se detectar erro grave, adicionar mensagem automática
+            const highErrors = feedback.errors.filter(e => e.severity === 'high');
+            if (highErrors.length > 0 && Math.random() > 0.7) {
+              const errorMessage: Message = {
+                id: `error_feedback_${Date.now()}`,
+                role: 'assistant',
+                content: `🎯 **Dica em tempo real:**\n\n${highErrors[0].correction}\n\n${feedback.suggestions[0] || ''}`,
+                timestamp: Date.now(),
+                confidence: 0.9
+              };
+              setMessages(prev => [...prev, errorMessage]);
+            }
+          });
+          
+          setIsAudioListening(true);
+          setShowAudioPanel(true);
+          
+          // Mensagem de início
+          const startMessage: Message = {
+            id: `audio_start_${Date.now()}`,
+            role: 'assistant',
+            content: `🎤 **Captação de áudio ativada!**\n\nEstou ouvindo você tocar o ${practiceType === 'chord' ? 'acorde' : practiceType === 'scale' ? 'escala' : 'nota'} **${practiceTarget}**.\n\nToque agora e vou te dar feedback em tempo real sobre:\n• Notas corretas/erradas\n• Qualidade do som\n• Dicas de correção`,
+            timestamp: Date.now(),
+            confidence: 1.0
+          };
+          setMessages(prev => [...prev, startMessage]);
+        } else {
+          setAudioError('Não foi possível acessar o microfone. Verifique as permissões.');
+        }
+      } catch (error) {
+        setAudioError('Erro ao inicializar captação de áudio.');
+        console.error('Audio init error:', error);
+      } finally {
+        setIsAudioInitializing(false);
+      }
+    }
+  }, [isAudioListening, practiceTarget, practiceType, level]);
+
+  // Limpar recursos ao fechar
+  useEffect(() => {
+    return () => {
+      if (isAudioListening) {
+        realtimeAIFeedbackService.stopAnalysis();
+      }
+    };
+  }, [isAudioListening]);
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
@@ -65,6 +172,9 @@ Posso ajudar com:
 • Motivação e orientação
 • Análise do seu desempenho
 • Sugestões de músicas para praticar
+
+🎤 **NOVO: Captação de Áudio em Tempo Real!**
+Use o botão "Ouvir" acima para que eu escute você tocar. Vou identificar erros instantaneamente e te dar dicas de correção na hora!
 
 Como você está se sentindo hoje? O que gostaria de trabalhar?`,
         timestamp: Date.now(),
@@ -403,6 +513,218 @@ Como você está se sentindo hoje? O que gostaria de trabalhar?`,
               </Button>
             ))}
           </div>
+        </div>
+
+        {/* AI Audio Tutor Panel - Otimizado com IA */}
+        <div className="px-4 py-2 border-b border-white/10">
+          <AITutorAudioFeedback
+            practiceType={practiceType}
+            target={practiceTarget}
+            difficulty={level < 5 ? 'beginner' : level < 15 ? 'intermediate' : 'advanced'}
+            showControls={false}
+            onSessionEnd={(analysis) => {
+              // Adicionar resumo da sessão como mensagem
+              const summaryMessage: Message = {
+                id: `session_summary_${Date.now()}`,
+                role: 'assistant',
+                content: `📊 **Resumo da sua sessão de prática:**\n\n${analysis.aiSummary}\n\n**Recomendações:**\n${analysis.recommendations.map(r => `• ${r}`).join('\n')}`,
+                timestamp: Date.now(),
+                confidence: 1.0
+              };
+              setMessages(prev => [...prev, summaryMessage]);
+            }}
+          />
+        </div>
+
+        {/* Audio Feedback Panel - Antigo (mantido para referência) */}
+        <div className="px-4 py-2 border-b border-white/10 bg-gradient-to-r from-blue-500/10 to-purple-500/10 hidden">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2 text-xs text-gray-400">
+              <Mic className="w-3 h-3" />
+              Captação de Áudio em Tempo Real
+            </div>
+            <Button
+              onClick={toggleAudioListening}
+              disabled={isAudioInitializing}
+              variant={isAudioListening ? "destructive" : "default"}
+              size="sm"
+              className={`text-xs ${
+                isAudioListening 
+                  ? 'bg-red-500 hover:bg-red-600' 
+                  : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
+              }`}
+            >
+              {isAudioInitializing ? (
+                <>
+                  <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin mr-1" />
+                  Iniciando...
+                </>
+              ) : isAudioListening ? (
+                <>
+                  <MicOff className="w-3 h-3 mr-1" />
+                  Parar
+                </>
+              ) : (
+                <>
+                  <Mic className="w-3 h-3 mr-1" />
+                  Ouvir
+                </>
+              )}
+            </Button>
+          </div>
+          
+          {/* Seletor de alvo */}
+          {!isAudioListening && (
+            <div className="flex gap-2 mb-2">
+              <select
+                value={practiceType}
+                onChange={(e) => setPracticeType(e.target.value as 'chord' | 'scale' | 'note')}
+                className="text-xs bg-white/10 border border-white/20 rounded px-2 py-1 text-white"
+              >
+                <option value="chord">Acorde</option>
+                <option value="scale">Escala</option>
+                <option value="note">Nota</option>
+              </select>
+              <select
+                value={practiceTarget}
+                onChange={(e) => setPracticeTarget(e.target.value)}
+                className="flex-1 text-xs bg-white/10 border border-white/20 rounded px-2 py-1 text-white"
+              >
+                {practiceType === 'chord' ? (
+                  <>
+                    <optgroup label="Maiores">
+                      <option value="C">C (Dó Maior)</option>
+                      <option value="D">D (Ré Maior)</option>
+                      <option value="E">E (Mi Maior)</option>
+                      <option value="F">F (Fá Maior)</option>
+                      <option value="G">G (Sol Maior)</option>
+                      <option value="A">A (Lá Maior)</option>
+                    </optgroup>
+                    <optgroup label="Menores">
+                      <option value="Am">Am (Lá menor)</option>
+                      <option value="Dm">Dm (Ré menor)</option>
+                      <option value="Em">Em (Mi menor)</option>
+                    </optgroup>
+                    <optgroup label="Com 7ª">
+                      <option value="C7">C7</option>
+                      <option value="D7">D7</option>
+                      <option value="E7">E7</option>
+                      <option value="G7">G7</option>
+                      <option value="A7">A7</option>
+                    </optgroup>
+                  </>
+                ) : practiceType === 'scale' ? (
+                  <>
+                    <option value="C major">C Maior</option>
+                    <option value="G major">G Maior</option>
+                    <option value="D major">D Maior</option>
+                    <option value="A minor">A Menor</option>
+                    <option value="E minor">E Menor</option>
+                    <option value="A pentatonic_minor">A Pentatônica Menor</option>
+                    <option value="E pentatonic_minor">E Pentatônica Menor</option>
+                    <option value="A blues">A Blues</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="E">E (Mi)</option>
+                    <option value="A">A (Lá)</option>
+                    <option value="D">D (Ré)</option>
+                    <option value="G">G (Sol)</option>
+                    <option value="B">B (Si)</option>
+                    <option value="e">e (Mi agudo)</option>
+                  </>
+                )}
+              </select>
+            </div>
+          )}
+
+          {audioError && (
+            <div className="flex items-center gap-2 text-xs text-red-400 mb-2">
+              <AlertCircle className="w-3 h-3" />
+              {audioError}
+            </div>
+          )}
+
+          {/* Feedback em tempo real */}
+          {isAudioListening && currentFeedback && (
+            <div className="space-y-2">
+              {/* Barra de qualidade */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">Qualidade:</span>
+                <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-300 ${
+                      currentFeedback.quality >= 75 ? 'bg-green-500' :
+                      currentFeedback.quality >= 50 ? 'bg-yellow-500' :
+                      currentFeedback.quality >= 25 ? 'bg-orange-500' :
+                      'bg-red-500'
+                    }`}
+                    style={{ width: `${currentFeedback.quality}%` }}
+                  />
+                </div>
+                <span className={`text-xs font-bold ${
+                  currentFeedback.quality >= 75 ? 'text-green-400' :
+                  currentFeedback.quality >= 50 ? 'text-yellow-400' :
+                  currentFeedback.quality >= 25 ? 'text-orange-400' :
+                  'text-red-400'
+                }`}>
+                  {currentFeedback.quality}%
+                </span>
+              </div>
+
+              {/* Notas detectadas */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-gray-400">Detectado:</span>
+                {currentFeedback.detectedNotes.length > 0 ? (
+                  currentFeedback.detectedNotes.map((note, i) => (
+                    <Badge 
+                      key={i} 
+                      variant="outline" 
+                      className={`text-xs ${
+                        currentFeedback.expectedNotes.includes(note)
+                          ? 'border-green-400 text-green-400'
+                          : 'border-red-400 text-red-400'
+                      }`}
+                    >
+                      <Music className="w-2 h-2 mr-1" />
+                      {note}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-xs text-gray-500 italic">Aguardando som...</span>
+                )}
+              </div>
+
+              {/* Erros */}
+              {currentFeedback.errors.length > 0 && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-2">
+                  <div className="flex items-center gap-1 text-xs text-red-400 mb-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    {currentFeedback.errors[0].description}
+                  </div>
+                  <p className="text-xs text-gray-300">
+                    {currentFeedback.errors[0].correction}
+                  </p>
+                </div>
+              )}
+
+              {/* Encorajamento */}
+              {currentFeedback.isCorrect && (
+                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-2">
+                  <p className="text-xs text-green-400">
+                    {currentFeedback.encouragement}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {isAudioListening && !currentFeedback && (
+            <div className="flex items-center gap-2 py-2">
+              <Volume2 className="w-4 h-4 text-green-400 animate-pulse" />
+              <span className="text-xs text-gray-400">Ouvindo... toque seu instrumento!</span>
+            </div>
+          )}
         </div>
 
         {/* Messages */}

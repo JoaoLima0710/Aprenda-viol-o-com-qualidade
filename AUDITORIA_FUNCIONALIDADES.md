@@ -805,28 +805,40 @@
 
 ---
 
-### 5.2 LLM Integration ✅
+### 5.2 LLM Integration ✅ ATUALIZADO
 **Funcionalidade:**
-- [x] FreeLLMService - 5 provedores (Groq, HuggingFace, Gemini, Ollama, Simulado)
+- [x] FreeLLMService - 6 provedores (OpenRouter, Groq, HuggingFace, Gemini, Ollama, Simulado)
 - [x] LLMIntegrationService - Integração unificada
-- [x] LLMSettings - Configurações com teste de conexão
+- [x] LLMSettings - Configurações com teste de conexão e seleção de modelo
 - [x] API key persistente no localStorage
+- [x] Fallback automático entre provedores
+- [x] Seleção de modelo por provedor
 
 **Provedores:**
-- Groq: Gratuito com limite, rápido
-- HuggingFace: Gratuito, muitos modelos
+- **OpenRouter (NOVO - Recomendado)**: Múltiplos modelos gratuitos (Llama, Mistral, Gemma). ~10.000 tokens/dia grátis
+- Groq: Gratuito com limite, inferência ultrarrápida
+- HuggingFace: Gratuito, milhares de modelos open source
 - Google Gemini: Gratuito com limite
 - Ollama: Local, offline, privado
 - Simulado: Fallback sem rede
 
+**Modelos Gratuitos (OpenRouter):**
+- `meta-llama/llama-3.2-3b-instruct:free`
+- `mistralai/mistral-7b-instruct:free`
+- `google/gemma-2-9b-it:free`
+- `qwen/qwen-2-7b-instruct:free`
+
 **Design:**
-- [x] Seletor de provedor claro
+- [x] Seletor de provedor claro com descrições
 - [x] Campo de API key com save
+- [x] Seletor de modelo por provedor
 - [x] Botão de teste por provedor
 - [x] Status visual (check/X)
+- [x] Links diretos para obter API keys
 
 **Notas:**
-> Flexibilidade total de provedores LLM
+> Flexibilidade total de provedores LLM com OpenRouter como padrão recomendado
+> para melhor relação custo/benefício (gratuito com múltiplos modelos)
 
 ---
 
@@ -867,6 +879,59 @@
 
 **Notas:**
 > Sistema de IA robusto para tutoria musical 
+
+---
+
+### 5.5 Feedback de Áudio em Tempo Real ✅ NOVO
+**Funcionalidade:**
+- [x] RealtimeAIFeedbackService - Serviço de captação de áudio em tempo real
+- [x] PitchDetectionService - Detecção de pitch usando autocorrelação
+- [x] RealtimeAudioFeedback - Componente reutilizável para feedback
+- [x] Integração no ConversationalTutor - Tutor com escuta ativa
+- [x] Integração na página de Acordes - Feedback durante prática
+- [x] Detecção de notas erradas com correções específicas
+- [x] Detecção de cordas abafadas
+- [x] Análise de afinação (cents deviation)
+- [x] Histórico de erros da sessão
+- [x] Resumo de sessão com recomendações
+
+**Features:**
+- Captação de microfone em tempo real
+- Identificação de notas tocadas (frequência → nota)
+- Comparação com acorde/escala/nota esperado
+- Feedback imediato sobre erros
+- Sugestões de correção de posição de dedos
+- Barra de qualidade visual (0-100%)
+- Encorajamento adaptativo ao progresso
+- Modo compacto para integração em outras telas
+
+**Design:**
+- [x] Interface clara com indicador de microfone ativo
+- [x] Barra de progresso colorida (verde/amarelo/vermelho)
+- [x] Badges para notas corretas (verde) e erradas (vermelho)
+- [x] Cards de erro com severidade visual
+- [x] Animações de "aguardando som"
+- [x] Seletor de alvo (acorde/escala/nota)
+- [x] Responsivo com modo compacto
+
+**Teoria/Pedagogia:**
+- [x] Feedback específico por tipo de erro
+- [x] Sugestões de posição de dedos
+- [x] Encorajamento progressivo
+- [x] Resumo educativo ao final da sessão
+
+**Arquivos Criados:**
+- `client/src/services/RealtimeAIFeedbackService.ts`
+- `client/src/components/audio/RealtimeAudioFeedback.tsx`
+
+**Integrações:**
+- ConversationalTutor: Botão "Ouvir" que ativa captação
+- Chords.tsx: Componente de feedback na seção de prática
+
+**Notas:**
+> Sistema de feedback em tempo real que escuta o usuário tocar
+> e identifica erros imediatamente com sugestões de correção.
+> Essencial para aprendizado eficaz sem professor presencial.
 
 ---
 

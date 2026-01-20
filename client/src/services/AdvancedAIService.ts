@@ -1,8 +1,10 @@
 import { PracticeSession, WeakArea, Recommendation, UserProfile } from './AIAssistantService';
+import { freeLLMService } from './FreeLLMService';
 
 /**
  * Advanced AI Service - 2026 Edition
  * Integração com LLMs para tutoria conversacional e análise preditiva
+ * Agora usa OpenRouter automaticamente para respostas reais de IA
  */
 
 // Tipos para o sistema de IA avançado
@@ -60,21 +62,180 @@ class AdvancedAIService {
 
   /**
    * Tutoria Conversacional com LLMs
+   * Agora usa OpenRouter automaticamente para respostas reais de IA
    */
   async getConversationalResponse(context: ConversationContext): Promise<LLMResponse> {
-    // Simulação de chamada para LLM (em produção usaria API real)
     const prompt = this.buildConversationPrompt(context);
 
-    // Simular resposta baseada em lógica avançada
-    const simulatedResponse = await this.simulateLLMResponse(prompt, context);
+    try {
+      // Usar LLM real via OpenRouter (configurado automaticamente)
+      const systemPrompt = `Você é "MusicTutor", um tutor de música ESPECIALIZADO EXCLUSIVAMENTE em violão/guitarra e aprendizado musical.
 
-    return {
-      response: simulatedResponse.message,
-      recommendations: simulatedResponse.recommendations,
-      actions: simulatedResponse.actions,
-      confidence: simulatedResponse.confidence,
-      nextSteps: simulatedResponse.nextSteps
-    };
+🚫 RESTRIÇÕES CRÍTICAS:
+- Você DEVE responder APENAS sobre música, violão, guitarra, teoria musical, técnicas, acordes, escalas, ritmo, prática musical e aprendizado de instrumentos
+- Se o usuário perguntar sobre outros assuntos (tecnologia, política, esportes, etc.), você DEVE educadamente redirecionar:
+  "Desculpe, mas sou especializado apenas em música e violão. Como posso te ajudar com seu aprendizado musical?"
+- Mantenha o foco 100% em música e violão
+
+✅ SUA ESPECIALIDADE:
+- Teoria musical (escalas, acordes, progressões, intervalos)
+- Técnicas de violão (pestana, dedilhado, palhetada, hammer-on, pull-off)
+- Pedagogia musical adaptativa
+- Motivação para músicos
+- Exercícios e práticas específicas
+
+Sua missão é ajudar alunos a aprender música de forma eficaz, motivadora e personalizada.
+Sempre seja empático, específico e ofereça ações práticas relacionadas a música.`;
+
+      const llmResponse = await freeLLMService.callLLM([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt }
+      ]);
+
+      // Parsear resposta do LLM e extrair recomendações
+      const response = llmResponse.content || '';
+      
+      // Extrair recomendações e ações da resposta (pode ser melhorado com parsing estruturado)
+      const recommendations = this.extractRecommendationsFromResponse(response, context);
+      const actions = this.extractActionsFromResponse(response);
+      const nextSteps = this.extractNextStepsFromResponse(response);
+
+      return {
+        response: response,
+        recommendations: recommendations,
+        actions: actions,
+        confidence: 0.9, // Alta confiança quando LLM real responde
+        nextSteps: nextSteps
+      };
+    } catch (error) {
+      console.error('Erro ao chamar LLM, usando fallback:', error);
+      
+      // Fallback para resposta simulada se LLM falhar
+      const simulatedResponse = await this.simulateLLMResponse(prompt, context);
+      
+      return {
+        response: simulatedResponse.message,
+        recommendations: simulatedResponse.recommendations,
+        actions: simulatedResponse.actions,
+        confidence: 0.7, // Menor confiança no fallback
+        nextSteps: simulatedResponse.nextSteps
+      };
+    }
+  }
+
+  /**
+   * Extrai recomendações da resposta do LLM
+   */
+  private extractRecommendationsFromResponse(response: string, context: ConversationContext): Recommendation[] {
+    // Tentar extrair recomendações estruturadas da resposta
+    // Por enquanto, gerar recomendações baseadas no contexto
+    const recommendations: Recommendation[] = [];
+    
+    // Se a resposta menciona acordes, adicionar recomendação de acordes
+    if (response.toLowerCase().includes('acorde')) {
+      recommendations.push({
+        id: 'chord_practice',
+        title: 'Praticar Acordes',
+        description: 'Trabalhe nos acordes mencionados na resposta',
+        priority: 7,
+        estimatedTime: 15,
+        category: 'chord'
+      });
+    }
+
+    // Se a resposta menciona escalas, adicionar recomendação de escalas
+    if (response.toLowerCase().includes('escala')) {
+      recommendations.push({
+        id: 'scale_practice',
+        title: 'Praticar Escalas',
+        description: 'Trabalhe nas escalas mencionadas',
+        priority: 6,
+        estimatedTime: 20,
+        category: 'scale'
+      });
+    }
+
+    // Recomendação padrão baseada no nível
+    if (recommendations.length === 0) {
+      recommendations.push({
+        id: 'general_practice',
+        title: 'Prática Geral',
+        description: 'Continue praticando regularmente',
+        priority: 5,
+        estimatedTime: 30,
+        category: 'general'
+      });
+    }
+
+    return recommendations;
+  }
+
+  /**
+   * Extrai ações sugeridas da resposta do LLM
+   */
+  private extractActionsFromResponse(response: string): string[] {
+    const actions: string[] = [];
+    
+    // Procurar por padrões de ação na resposta
+    const actionPatterns = [
+      /praticar\s+([^\.]+)/gi,
+      /tentar\s+([^\.]+)/gi,
+      /focar\s+em\s+([^\.]+)/gi,
+      /trabalhar\s+([^\.]+)/gi
+    ];
+
+    actionPatterns.forEach(pattern => {
+      const matches = response.match(pattern);
+      if (matches) {
+        matches.forEach(match => {
+          const action = match.replace(/^(praticar|tentar|focar em|trabalhar)\s+/i, '').trim();
+          if (action && action.length < 50) {
+            actions.push(action.charAt(0).toUpperCase() + action.slice(1));
+          }
+        });
+      }
+    });
+
+    // Se não encontrou ações específicas, retornar ações genéricas
+    if (actions.length === 0) {
+      return ['Revisar a resposta do tutor', 'Aplicar as sugestões', 'Praticar regularmente'];
+    }
+
+    return actions.slice(0, 3); // Máximo 3 ações
+  }
+
+  /**
+   * Extrai próximos passos da resposta do LLM
+   */
+  private extractNextStepsFromResponse(response: string): string[] {
+    const steps: string[] = [];
+    
+    // Procurar por listas numeradas ou com bullets
+    const stepPatterns = [
+      /(\d+\.\s*[^\n]+)/g,
+      /(•\s*[^\n]+)/g,
+      /(-\s*[^\n]+)/g,
+      /(→\s*[^\n]+)/g
+    ];
+
+    stepPatterns.forEach(pattern => {
+      const matches = response.match(pattern);
+      if (matches) {
+        matches.forEach(match => {
+          const step = match.replace(/^[\d•\-→\.\s]+/, '').trim();
+          if (step && step.length < 80) {
+            steps.push(step);
+          }
+        });
+      }
+    });
+
+    // Se não encontrou passos estruturados, retornar passos genéricos
+    if (steps.length === 0) {
+      return ['Ler a resposta completa', 'Aplicar as dicas', 'Praticar o que foi sugerido'];
+    }
+
+    return steps.slice(0, 3); // Máximo 3 passos
   }
 
   /**
@@ -168,41 +329,124 @@ class AdvancedAIService {
   private buildConversationPrompt(context: ConversationContext): string {
     const { userMessage, userProfile, recentSessions, currentMood, context: conversationHistory } = context;
 
+    // Verificar se a mensagem é sobre música
+    const isMusicRelated = this.isMessageAboutMusic(userMessage);
+    const redirectMessage = !isMusicRelated ? 
+      '\n⚠️ ATENÇÃO: A mensagem do aluno pode não ser sobre música. Se não for, redirecione educadamente: "Desculpe, mas sou especializado apenas em música e violão. Como posso te ajudar com seu aprendizado musical?"\n' : '';
+
+    const levelDescription = userProfile.level <= 2 ? 'iniciante absoluto' : 
+                            userProfile.level <= 4 ? 'iniciante avançado' :
+                            userProfile.level <= 6 ? 'intermediário' :
+                            userProfile.level <= 8 ? 'intermediário avançado' : 'avançado';
+
     return `
-Você é um tutor de música inteligente e empático para ${userProfile.level === 1 ? 'iniciantes' : userProfile.level < 5 ? 'intermediários' : 'avançados'}.
+Você é "MusicTutor", um tutor de música ESPECIALIZADO EXCLUSIVAMENTE em violão/guitarra e aprendizado musical.
 
-CONTEXTO DO USUÁRIO:
-- Nível: ${userProfile.level}
-- Tempo total de prática: ${Math.round(userProfile.totalPracticeTime / 3600)}h
+🚫 RESTRIÇÃO ABSOLUTA:
+- Você DEVE responder APENAS sobre música, violão, guitarra, teoria musical, técnicas, acordes, escalas, ritmo, prática musical e aprendizado de instrumentos
+- Se a mensagem NÃO for sobre música, redirecione educadamente para o aprendizado musical
+- Mantenha o foco 100% em música e violão
+
+✅ SUA ESPECIALIDADE:
+- Teoria musical (escalas, acordes, progressões harmônicas, intervalos)
+- Técnicas de violão (pestana, dedilhado, palhetada, hammer-on, pull-off)
+- Pedagogia musical adaptativa
+- Psicologia motivacional para músicos
+
+🎓 NÍVEL DO ALUNO: ${levelDescription} (${userProfile.level}/10)
+
+📊 PERFIL DETALHADO:
+- Tempo total praticado: ${Math.round(userProfile.totalPracticeTime / 3600)}h
 - Precisão média: ${Math.round(userProfile.averageAccuracy)}%
-- Ritmo de aprendizado: ${userProfile.learningPace}
-- Áreas fortes: ${userProfile.strongAreas.join(', ') || 'nenhuma identificada'}
-- Humor atual: ${currentMood || 'neutro'}
+- Ritmo de aprendizado: ${userProfile.learningPace === 'fast' ? 'rápido' : userProfile.learningPace === 'slow' ? 'gradual' : 'moderado'}
+- Pontos fortes: ${userProfile.strongAreas.join(', ') || 'em desenvolvimento'}
+- Áreas para melhorar: ${userProfile.weakAreas?.slice(0, 3).map(w => w.category).join(', ') || 'a definir'}
+- Estado emocional atual: ${currentMood === 'frustrated' ? '😤 frustrado' : currentMood === 'motivated' ? '💪 motivado' : currentMood === 'confused' ? '🤔 confuso' : currentMood === 'confident' ? '😊 confiante' : '😐 neutro'}
 
-SESSÕES RECENTES:
-${recentSessions.slice(-3).map(s =>
-  `- ${s.type}: ${s.itemName} (${s.accuracy}% precisão, ${Math.round(s.duration/60)}min)`
-).join('\n')}
+📝 PRÁTICA RECENTE:
+${recentSessions.length > 0 ? recentSessions.slice(-3).map(s =>
+  `• ${s.type === 'chord' ? '🎸 Acordes' : s.type === 'scale' ? '🎼 Escalas' : s.type === 'song' ? '🎵 Música' : '👂 Ouvido'}: ${s.itemName} → ${s.accuracy}% (${Math.round(s.duration/60)}min)`
+).join('\n') : '• Ainda não há sessões registradas'}
 
-HISTÓRICO DA CONVERSA:
-${conversationHistory.slice(-2).join('\n')}
+💬 CONTEXTO DA CONVERSA:
+${conversationHistory.slice(-2).join('\n') || 'Início da conversa'}
 
-PERGUNTA DO USUÁRIO: "${userMessage}"
+❓ MENSAGEM DO ALUNO: "${userMessage}"
+${redirectMessage}
+📋 DIRETRIZES DE RESPOSTA:
+1. FOCO EM MÚSICA: Responda APENAS sobre música, violão, guitarra e aprendizado musical
+2. PERSONALIZE: Adapte linguagem e complexidade ao nível ${levelDescription}
+3. SEJA ESPECÍFICO: Dê exemplos concretos (acordes, posições, exercícios)
+4. MOTIVE: ${currentMood === 'frustrated' ? 'Seja especialmente encorajador e empático' : currentMood === 'motivated' ? 'Aproveite a energia positiva para sugerir desafios' : 'Mantenha tom positivo e construtivo'}
+5. AÇÃO CLARA: Sempre sugira um próximo passo prático relacionado a música
+6. CONHECIMENTO MUSICAL: Use termos corretos mas explique-os quando necessário
+7. FORMATO: Use emojis com moderação, parágrafos curtos, listas quando apropriado
 
-INSTRUÇÕES:
-1. Seja empático e motivacional
-2. Forneça resposta clara e acionável
-3. Sugira exercícios específicos quando apropriado
-4. Considere o nível e preferências do usuário
-5. Incentive prática consistente
+${currentMood === 'frustrated' ? '⚠️ ATENÇÃO: O aluno está frustrado. Valide seus sentimentos, normalize dificuldades e sugira passos menores.' : ''}
+${userProfile.averageAccuracy < 60 ? '💡 DICA: Precisão baixa - sugira exercícios mais básicos e prática lenta.' : ''}
+${userProfile.level <= 2 ? '🌱 INICIANTE: Evite jargões, explique conceitos básicos, foque em fundamentos.' : ''}
 
-RESPONDA DE FORMA NATURAL E ÚTIL:
-`;
+Responda de forma natural, como um professor experiente e amigável, mas SEMPRE mantendo o foco em música:`;
+  }
+
+  /**
+   * Verifica se a mensagem é sobre música
+   */
+  private isMessageAboutMusic(message: string): boolean {
+    const musicKeywords = [
+      'música', 'musica', 'violão', 'violao', 'guitarra', 'acorde', 'escala', 'nota', 'notas',
+      'ritmo', 'tempo', 'compasso', 'melodia', 'harmonia', 'tom', 'semitom', 'traste', 'trastes',
+      'corda', 'cordas', 'dedo', 'dedos', 'pestana', 'palheta', 'dedilhado', 'palhetada',
+      'praticar', 'prática', 'exercício', 'exercicio', 'tocar', 'tocar violão', 'tocar guitarra',
+      'aprender', 'ensinar', 'técnica', 'tecnica', 'progressão', 'progessao', 'intervalo',
+      'maior', 'menor', 'sustenido', 'bemol', 'solo', 'improvisar', 'improvisação',
+      'cifra', 'partitura', 'tablatura', 'tab', 'backing track', 'metrônomo', 'metronomo'
+    ];
+
+    const messageLower = message.toLowerCase();
+    
+    // Verificar se contém palavras-chave de música
+    const hasMusicKeyword = musicKeywords.some(keyword => messageLower.includes(keyword));
+    
+    // Verificar se é uma saudação ou pergunta genérica (permitir)
+    const isGreeting = /^(olá|ola|oi|hey|hello|bom dia|boa tarde|boa noite|tudo bem|como vai)/i.test(message);
+    
+    // Verificar se menciona assuntos não relacionados a música
+    const nonMusicKeywords = [
+      'futebol', 'futebol', 'política', 'politica', 'eleição', 'eleicao', 'presidente',
+      'tecnologia', 'computador', 'programação', 'programacao', 'código', 'codigo',
+      'filme', 'cinema', 'série', 'serie', 'netflix', 'esporte', 'corrida', 'natação',
+      'receita', 'culinária', 'culinaria', 'comida', 'restaurante', 'viagem', 'turismo'
+    ];
+    
+    const hasNonMusicKeyword = nonMusicKeywords.some(keyword => messageLower.includes(keyword));
+    
+    // Se tem palavra não relacionada a música, não é sobre música
+    if (hasNonMusicKeyword) {
+      return false;
+    }
+    
+    // Se é saudação ou tem palavra relacionada a música, é sobre música
+    return isGreeting || hasMusicKeyword;
   }
 
   private async simulateLLMResponse(prompt: string, context: ConversationContext): Promise<any> {
     // Simulação de resposta LLM baseada em análise do contexto
-    const { userProfile, recentSessions, currentMood } = context;
+    const { userMessage, userProfile, recentSessions, currentMood } = context;
+
+    // Verificar se a mensagem é sobre música
+    const isMusicRelated = this.isMessageAboutMusic(userMessage);
+    
+    // Se não for sobre música, redirecionar
+    if (!isMusicRelated) {
+      return {
+        message: 'Desculpe, mas sou especializado apenas em música e violão. Como posso te ajudar com seu aprendizado musical? Por exemplo, posso ajudar com acordes, escalas, técnicas, exercícios ou qualquer dúvida sobre violão/guitarra!',
+        recommendations: [],
+        actions: ['Explorar acordes básicos', 'Praticar escalas', 'Aprender técnicas de violão'],
+        confidence: 0.9,
+        nextSteps: ['Fazer uma pergunta sobre música', 'Pedir ajuda com acordes', 'Perguntar sobre escalas']
+      };
+    }
 
     let response = '';
     let recommendations: Recommendation[] = [];
@@ -671,20 +915,27 @@ RESPONDA DE FORMA NATURAL E ÚTIL:
     const recentAccuracy = sessions.length > 0 ?
       sessions.slice(-3).reduce((sum, s) => sum + s.accuracy, 0) / Math.min(3, sessions.length) : 0;
 
-    let response = "Entendo que está enfrentando dificuldades! Isso é completamente normal no aprendizado musical. ";
+    let response = "Entendo perfeitamente o que você está sentindo! 💪 Dificuldades fazem parte do caminho de todo músico. ";
 
     if (profile.level <= 3) {
-      response += "Como você está começando, é importante focar nos fundamentos. ";
+      response += "\n\nComo você está no início da jornada, vamos focar nos fundamentos:\n";
+      response += "• **Posicionamento dos dedos**: Mantenha os dedos curvados e próximos às casas\n";
+      response += "• **Pressão nas cordas**: Pressione firme, mas sem tensionar o pulso\n";
+      response += "• **Transições lentas**: Pratique mudanças de acordes BEM devagar primeiro\n";
     } else {
-      response += "Mesmo com experiência, alguns conceitos podem ser desafiadores. ";
+      response += "\n\nMesmo com sua experiência, às vezes precisamos dar um passo atrás para avançar:\n";
+      response += "• Identifique o ponto exato da dificuldade\n";
+      response += "• Isole e pratique apenas essa parte\n";
+      response += "• Use o metrônomo em velocidade 50% mais lenta\n";
     }
 
     if (recentAccuracy < 60) {
-      response += "Sua precisão recente está em torno de " + Math.round(recentAccuracy) +
-                 "%. Que tal diminuirmos um pouco o ritmo e focarmos na qualidade? ";
+      response += `\n📊 Sua precisão recente está em ${Math.round(recentAccuracy)}%. `;
+      response += "Isso indica que a dificuldade pode estar alta demais. ";
+      response += "**Sugestão**: Vamos simplificar e construir confiança com exercícios mais básicos primeiro!";
     }
 
-    response += "Lembre-se: todo músico passou por isso. A chave é a prática consistente e paciente. ";
+    response += "\n\n🌟 **Lembre-se**: Jimi Hendrix, John Mayer, Ana Vidovic - todos passaram por frustrações. A diferença está em persistir!";
 
     return response;
   }

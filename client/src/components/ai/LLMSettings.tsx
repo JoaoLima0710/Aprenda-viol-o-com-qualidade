@@ -15,12 +15,14 @@ export function LLMSettings() {
   const [apiKey, setApiKey] = useState('');
   const [testing, setTesting] = useState<FreeLLMProvider | null>(null);
   const [testResults, setTestResults] = useState<Record<FreeLLMProvider, boolean | null>>({
+    openrouter: null,
     groq: null,
     huggingface: null,
     gemini: null,
     ollama: null,
     simulated: null,
   });
+  const [selectedModel, setSelectedModel] = useState(config.model || '');
 
   const providers = freeLLMService.getAvailableProviders();
 
@@ -78,39 +80,62 @@ export function LLMSettings() {
   };
 
   const getProviderInfo = (provider: FreeLLMProvider) => {
-    const info: Record<FreeLLMProvider, { name: string; url: string; description: string; free: boolean }> = {
+    const info: Record<FreeLLMProvider, { name: string; url: string; description: string; free: boolean; needsApiKey: boolean }> = {
+      openrouter: {
+        name: 'OpenRouter (Automático)',
+        url: 'https://openrouter.ai/keys',
+        description: '✅ Funciona automaticamente! Múltiplos modelos gratuitos: Llama, Mistral, Gemma. 10.000+ tokens/dia grátis!',
+        free: true,
+        needsApiKey: false, // Não precisa - já configurado automaticamente
+      },
       groq: {
         name: 'Groq',
         url: 'https://console.groq.com/',
         description: 'Muito rápido, gratuito com rate limits generosos',
         free: true,
+        needsApiKey: true,
       },
       huggingface: {
         name: 'Hugging Face',
         url: 'https://huggingface.co/inference-api',
         description: 'Gratuito, sem necessidade de API key para modelos públicos',
         free: true,
+        needsApiKey: false,
       },
       gemini: {
         name: 'Google Gemini',
         url: 'https://makersuite.google.com/app/apikey',
         description: 'Gratuito, boa qualidade de respostas',
         free: true,
+        needsApiKey: true,
       },
       ollama: {
         name: 'Ollama',
         url: 'https://ollama.ai/',
         description: 'Totalmente local, requer instalação no seu computador',
         free: true,
+        needsApiKey: false,
       },
       simulated: {
         name: 'Simulado',
         url: '',
         description: 'Respostas pré-programadas (fallback)',
         free: true,
+        needsApiKey: false,
       },
     };
     return info[provider];
+  };
+
+  // Obtém os modelos disponíveis para o provedor atual
+  const getModelsForCurrentProvider = () => {
+    return freeLLMService.getModelsForProvider(config.provider);
+  };
+
+  const handleModelChange = (model: string) => {
+    setSelectedModel(model);
+    freeLLMService.updateConfig({ model });
+    setConfig(prev => ({ ...prev, model }));
   };
 
   return (
@@ -125,6 +150,22 @@ export function LLMSettings() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Mensagem de Status Automático */}
+        {config.provider === 'openrouter' && (
+          <div className="p-4 rounded-lg bg-green-500/20 border border-green-500/40">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-400" />
+              <div>
+                <p className="text-white font-semibold">OpenRouter Configurado Automaticamente!</p>
+                <p className="text-sm text-gray-300 mt-1">
+                  O sistema está pronto para usar. Não é necessário configurar nada. 
+                  O Tutor IA já está funcionando com modelos gratuitos de alta qualidade.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Seleção de Provedor */}
         <div className="space-y-2">
           <Label className="text-white">Provedor LLM</Label>
@@ -183,7 +224,7 @@ export function LLMSettings() {
         })()}
 
         {/* API Key (se necessário) */}
-        {config.provider !== 'simulated' && config.provider !== 'huggingface' && (
+        {getProviderInfo(config.provider).needsApiKey && (
           <div className="space-y-2">
             <Label className="text-white">API Key</Label>
             <div className="flex gap-2">
@@ -203,6 +244,32 @@ export function LLMSettings() {
             </div>
             <p className="text-xs text-gray-400">
               Sua API key é armazenada localmente no navegador
+            </p>
+          </div>
+        )}
+
+        {/* Seleção de Modelo */}
+        {getModelsForCurrentProvider().length > 0 && (
+          <div className="space-y-2">
+            <Label className="text-white">Modelo</Label>
+            <Select
+              value={selectedModel || getModelsForCurrentProvider()[0]}
+              onValueChange={handleModelChange}
+            >
+              <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                <SelectValue placeholder="Selecione um modelo" />
+              </SelectTrigger>
+              <SelectContent>
+                {getModelsForCurrentProvider().map((model) => (
+                  <SelectItem key={model} value={model}>
+                    <span className="text-sm">{model}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-400">
+              {config.provider === 'openrouter' && 'Modelos com ":free" no nome são gratuitos'}
+              {config.provider === 'groq' && 'Todos os modelos Groq têm inferência ultrarrápida'}
             </p>
           </div>
         )}

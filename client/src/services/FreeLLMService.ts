@@ -3,7 +3,7 @@
  * Suporta múltiplos provedores gratuitos para tutoria musical
  */
 
-export type FreeLLMProvider = 'groq' | 'huggingface' | 'gemini' | 'ollama' | 'simulated';
+export type FreeLLMProvider = 'openrouter' | 'groq' | 'huggingface' | 'gemini' | 'ollama' | 'simulated';
 
 export interface FreeLLMConfig {
   provider: FreeLLMProvider;
@@ -31,10 +31,14 @@ export interface LLMResponse {
 }
 
 class FreeLLMService {
+  // API Key padrão do OpenRouter - funciona automaticamente sem configuração
+  private readonly DEFAULT_OPENROUTER_KEY = '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';
+
   private defaultConfig: FreeLLMConfig = {
-    provider: 'groq', // Padrão: Groq (mais rápido e gratuito)
+    provider: 'openrouter', // Padrão: OpenRouter (múltiplos modelos gratuitos)
     temperature: 0.7,
     maxTokens: 2000,
+    model: 'meta-llama/llama-3.2-3b-instruct:free', // Modelo gratuito padrão
   };
 
   private config: FreeLLMConfig;
@@ -50,6 +54,13 @@ class FreeLLMService {
       }
     } else {
       this.config = { ...this.defaultConfig };
+    }
+
+    // Se OpenRouter está configurado mas não tem API key, usar a padrão
+    if (this.config.provider === 'openrouter' && !this.config.apiKey) {
+      this.config.apiKey = this.DEFAULT_OPENROUTER_KEY;
+      // Salvar automaticamente para não precisar configurar novamente
+      localStorage.setItem('musictutor_llm_config', JSON.stringify(this.config));
     }
   }
 
@@ -78,6 +89,7 @@ class FreeLLMService {
     const config = { ...this.config, ...options };
     const providers: FreeLLMProvider[] = [
       config.provider,
+      'openrouter', // Múltiplos modelos gratuitos
       'groq',
       'huggingface',
       'gemini',
@@ -110,6 +122,8 @@ class FreeLLMService {
     config: FreeLLMConfig
   ): Promise<LLMResponse> {
     switch (provider) {
+      case 'openrouter':
+        return this.callOpenRouter(messages, config);
       case 'groq':
         return this.callGroq(messages, config);
       case 'huggingface':
@@ -123,6 +137,69 @@ class FreeLLMService {
       default:
         throw new Error(`Provedor não suportado: ${provider}`);
     }
+  }
+
+  /**
+   * OpenRouter API - Múltiplos modelos gratuitos
+   * https://openrouter.ai/
+   * Oferece acesso a Llama, Mistral, Gemini e outros modelos gratuitos
+   * Funciona automaticamente sem necessidade de configuração
+   */
+  private async callOpenRouter(
+    messages: LLMMessage[],
+    config: FreeLLMConfig
+  ): Promise<LLMResponse> {
+    // Prioridade: config.apiKey > env var > API key padrão (automática)
+    const apiKey = config.apiKey || 
+                   import.meta.env.VITE_OPENROUTER_API_KEY || 
+                   this.DEFAULT_OPENROUTER_KEY;
+    
+    if (!apiKey) {
+      throw new Error('OpenRouter API key não configurada');
+    }
+
+    // Modelos gratuitos disponíveis no OpenRouter
+    // - meta-llama/llama-3.2-3b-instruct:free (rápido)
+    // - mistralai/mistral-7b-instruct:free (boa qualidade)
+    // - google/gemma-2-9b-it:free (Google)
+    // - nousresearch/nous-hermes-2-mixtral-8x7b-dpo (poderoso)
+    const model = config.model || 'meta-llama/llama-3.2-3b-instruct:free';
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': window.location.origin, // Requerido pelo OpenRouter
+        'X-Title': 'Aprenda Violão com Qualidade', // Nome do app
+      },
+      body: JSON.stringify({
+        model,
+        messages: messages.map(m => ({
+          role: m.role,
+          content: m.content,
+        })),
+        temperature: config.temperature || 0.7,
+        max_tokens: config.maxTokens || 2000,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenRouter API error: ${error}`);
+    }
+
+    const data = await response.json();
+
+    return {
+      content: data.choices[0]?.message?.content || '',
+      provider: 'openrouter',
+      usage: data.usage ? {
+        promptTokens: data.usage.prompt_tokens || 0,
+        completionTokens: data.usage.completion_tokens || 0,
+        totalTokens: data.usage.total_tokens || 0,
+      } : undefined,
+    };
   }
 
   /**
@@ -384,14 +461,64 @@ class FreeLLMService {
   /**
    * Lista provedores disponíveis (com base em configuração)
    */
-  getAvailableProviders(): Array<{ provider: FreeLLMProvider; available: boolean; name: string }> {
+  getAvailableProviders(): Array<{ provider: FreeLLMProvider; available: boolean; name: string; description: string; models: string[] }> {
     return [
-      { provider: 'groq', available: !!(this.config.apiKey || import.meta.env.VITE_GROQ_API_KEY), name: 'Groq (Rápido)' },
-      { provider: 'huggingface', available: true, name: 'Hugging Face (Gratuito)' },
-      { provider: 'gemini', available: !!(this.config.apiKey || import.meta.env.VITE_GEMINI_API_KEY), name: 'Google Gemini' },
-      { provider: 'ollama', available: true, name: 'Ollama (Local)' },
-      { provider: 'simulated', available: true, name: 'Simulado (Fallback)' },
+      { 
+        provider: 'openrouter', 
+        available: true, // Sempre disponível - usa API key padrão automaticamente
+        name: 'OpenRouter (Automático)', 
+        description: 'Múltiplos modelos gratuitos - Llama, Mistral, Gemma. Funciona automaticamente!',
+        models: [
+          'meta-llama/llama-3.2-3b-instruct:free',
+          'mistralai/mistral-7b-instruct:free',
+          'google/gemma-2-9b-it:free',
+          'qwen/qwen-2-7b-instruct:free',
+        ]
+      },
+      { 
+        provider: 'groq', 
+        available: !!(this.config.apiKey || import.meta.env.VITE_GROQ_API_KEY), 
+        name: 'Groq (Muito Rápido)', 
+        description: 'Inferência ultrarrápida gratuita',
+        models: ['llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma-7b-it']
+      },
+      { 
+        provider: 'huggingface', 
+        available: true, 
+        name: 'Hugging Face', 
+        description: 'Milhares de modelos open source',
+        models: ['microsoft/DialoGPT-medium', 'facebook/blenderbot-400M-distill']
+      },
+      { 
+        provider: 'gemini', 
+        available: !!(this.config.apiKey || import.meta.env.VITE_GEMINI_API_KEY), 
+        name: 'Google Gemini', 
+        description: 'IA do Google, gratuito com limite',
+        models: ['gemini-pro', 'gemini-1.5-flash']
+      },
+      { 
+        provider: 'ollama', 
+        available: true, 
+        name: 'Ollama (Local)', 
+        description: '100% offline, requer instalação',
+        models: ['llama2', 'mistral', 'phi', 'gemma']
+      },
+      { 
+        provider: 'simulated', 
+        available: true, 
+        name: 'Simulado (Fallback)', 
+        description: 'Respostas pré-programadas, sempre disponível',
+        models: []
+      },
     ];
+  }
+
+  /**
+   * Obtém modelos disponíveis para um provedor
+   */
+  getModelsForProvider(provider: FreeLLMProvider): string[] {
+    const providerInfo = this.getAvailableProviders().find(p => p.provider === provider);
+    return providerInfo?.models || [];
   }
 }
 
