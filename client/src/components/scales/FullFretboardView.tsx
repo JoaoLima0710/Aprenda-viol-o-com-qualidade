@@ -116,33 +116,34 @@ export function FullFretboardView({ scaleName, root, intervals }: FullFretboardV
   return (
     <div className="space-y-6">
       <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1a1a2e]/80 to-[#2a2a3e]/60 border border-white/20">
-        <div className="flex items-center justify-between mb-4">
+        {/* Header - Layout responsivo */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0">
               <Maximize2 className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white">🎸 Visualização Completa do Braço</h3>
-              <p className="text-sm text-gray-400">Todas as notas da escala {scaleName} em todo o braço</p>
+              <h3 className="text-lg lg:text-xl font-bold text-white">🎸 Visualização Completa do Braço</h3>
+              <p className="text-xs lg:text-sm text-gray-400">Todas as notas da escala {scaleName} em todo o braço</p>
             </div>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-shrink-0">
             <Button
               onClick={() => setShowAllFrets(!showAllFrets)}
               variant="outline"
               size="sm"
-              className="bg-white/5 border-white/10"
+              className="bg-white/5 border-white/10 whitespace-nowrap"
             >
               {showAllFrets ? (
                 <>
                   <Minimize2 className="w-4 h-4 mr-2" />
-                  Mostrar 12 trastes
+                  12 trastes
                 </>
               ) : (
                 <>
                   <Maximize2 className="w-4 h-4 mr-2" />
-                  Mostrar 24 trastes
+                  24 trastes
                 </>
               )}
             </Button>
@@ -151,10 +152,10 @@ export function FullFretboardView({ scaleName, root, intervals }: FullFretboardV
               onClick={() => setHighlightRoot(!highlightRoot)}
               variant="outline"
               size="sm"
-              className={highlightRoot 
+              className={`whitespace-nowrap ${highlightRoot 
                 ? 'bg-emerald-500/20 border-emerald-400' 
                 : 'bg-white/5 border-white/10'
-              }
+              }`}
             >
               {highlightRoot ? '⭐ Tônica' : 'Tônica'}
             </Button>
@@ -246,7 +247,7 @@ export function FullFretboardView({ scaleName, root, intervals }: FullFretboardV
                   <div
                     key={fret}
                     className={`
-                      flex-1 text-center text-xs font-bold min-w-[32px]
+                      flex-1 text-center text-xs font-bold min-w-[32px] mx-0.5
                       ${[3, 5, 7, 9, 12, 15, 17, 19, 21, 24].includes(fret) 
                         ? 'text-amber-400' 
                         : 'text-amber-200/60'
