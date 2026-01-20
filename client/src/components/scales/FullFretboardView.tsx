@@ -165,29 +165,15 @@ export function FullFretboardView({ scaleName, root, intervals }: FullFretboardV
           </div>
         </div>
 
-        {/* Fretboard */}
+        {/* Fretboard - Inspirado em f2k.mjgibson.com */}
         <div className="overflow-x-auto">
           <div className="min-w-full">
             <div className="bg-gradient-to-br from-[#2a1a0e] to-[#1a0f05] rounded-xl p-3 border-2 border-amber-800/50">
-              {/* Header com números dos trastes - CORRIGIDO: corda solta não conta, 1 = primeira casa */}
-              <div className="flex mb-2">
-                {/* Coluna para corda solta (0) */}
-                <div className="w-10 flex-shrink-0 text-center text-xs font-bold text-amber-400">0</div>
-                {/* Trastes 1-24 (primeira casa = 1) */}
-                {Array.from({ length: displayFrets }, (_, i) => i + 1).map((fret) => (
-                  <div
-                    key={fret}
-                    className="flex-1 text-center text-xs font-bold text-amber-200 min-w-[32px]"
-                  >
-                    {fret}
-                  </div>
-                ))}
-              </div>
-
-              {/* Cordas */}
+              
+              {/* Cordas do violão */}
               {STRINGS.map((stringNote, stringIndex) => (
                 <div key={stringIndex} className="flex items-center mb-1">
-                  {/* Traste 0 (corda solta) - COR MARROM */}
+                  {/* Corda solta (antes do traste 1) - sem número */}
                   <div
                     onClick={() => playNote(stringIndex, 0)}
                     className={`
@@ -210,7 +196,7 @@ export function FullFretboardView({ scaleName, root, intervals }: FullFretboardV
                     )}
                   </div>
 
-                  {/* Trastes 1-24 */}
+                  {/* Trastes 1 em diante */}
                   {Array.from({ length: displayFrets }, (_, i) => i + 1).map((fret) => {
                     const { note, octave } = getNoteAtPosition(stringIndex, fret);
                     const isScale = isScaleNote(note);
@@ -232,7 +218,7 @@ export function FullFretboardView({ scaleName, root, intervals }: FullFretboardV
                           hover:scale-105 cursor-pointer active:scale-95
                           ${playingNote === noteKey ? 'ring-2 ring-cyan-400 ring-offset-1 ring-offset-[#2a1a0e]' : ''}
                         `}
-                        title={`${note}${octave} - Clique para tocar`}
+                        title={`${note}${octave} (Traste ${fret}) - Clique para tocar`}
                       >
                         {playingNote === noteKey ? (
                           <Volume2 className="w-3 h-3 mx-auto animate-pulse" />
@@ -244,6 +230,43 @@ export function FullFretboardView({ scaleName, root, intervals }: FullFretboardV
                   })}
                 </div>
               ))}
+
+              {/* Numeração dos trastes - ABAIXO das cordas como no f2k.mjgibson.com */}
+              <div className="flex mt-2 pt-2 border-t border-amber-800/30">
+                {/* Espaço para coluna da corda solta (sem número) */}
+                <div className="w-10 flex-shrink-0"></div>
+                {/* Números dos trastes 1-24 */}
+                {Array.from({ length: displayFrets }, (_, i) => i + 1).map((fret) => (
+                  <div
+                    key={fret}
+                    className={`
+                      flex-1 text-center text-xs font-bold min-w-[32px]
+                      ${[3, 5, 7, 9, 12, 15, 17, 19, 21, 24].includes(fret) 
+                        ? 'text-amber-400' 
+                        : 'text-amber-200/60'
+                      }
+                    `}
+                  >
+                    {fret}
+                    {/* Marcadores de trastes (pontos) */}
+                    {[3, 5, 7, 9, 15, 17, 19, 21].includes(fret) && (
+                      <div className="w-1.5 h-1.5 bg-amber-400/60 rounded-full mx-auto mt-0.5" />
+                    )}
+                    {fret === 12 && (
+                      <div className="flex justify-center gap-0.5 mt-0.5">
+                        <div className="w-1.5 h-1.5 bg-amber-400 rounded-full" />
+                        <div className="w-1.5 h-1.5 bg-amber-400 rounded-full" />
+                      </div>
+                    )}
+                    {fret === 24 && (
+                      <div className="flex justify-center gap-0.5 mt-0.5">
+                        <div className="w-1.5 h-1.5 bg-amber-400 rounded-full" />
+                        <div className="w-1.5 h-1.5 bg-amber-400 rounded-full" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
