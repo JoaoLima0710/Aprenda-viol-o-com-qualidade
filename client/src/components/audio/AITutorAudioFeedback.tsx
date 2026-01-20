@@ -13,6 +13,7 @@ import {
   MicOff,
   Music,
   AlertTriangle,
+  AlertCircle,
   CheckCircle2,
   Volume2,
   Brain,
