@@ -11,7 +11,6 @@ import { useChordStore } from '@/stores/useChordStore';
 import { useUserStore } from '@/stores/useUserStore';
 import { useChordProgressionStore } from '@/stores/useChordProgressionStore';
 import { useAdaptiveDifficultyStore } from '@/stores/useAdaptiveDifficultyStore';
-import { useChordStore } from '@/stores/useChordStore';
 import { chords, getChordsByDifficulty } from '@/data/chords';
 import { Play, Check, StopCircle, Lock, Calendar, TrendingUp } from 'lucide-react';
 import { unifiedAudioService } from '@/services/UnifiedAudioService';
