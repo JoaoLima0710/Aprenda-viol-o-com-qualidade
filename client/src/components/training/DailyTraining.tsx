@@ -45,6 +45,34 @@ export function DailyTraining() {
     return 'Avançado';
   }, []);
 
+  const getPriorityBadge = useCallback((priority: 'essential' | 'recommended' | 'optional') => {
+    switch (priority) {
+      case 'essential':
+        return (
+          <Badge className="bg-red-500/20 text-red-300 border-red-500/40 flex items-center gap-1">
+            <Flame className="w-3 h-3" />
+            Essencial
+          </Badge>
+        );
+      case 'recommended':
+        return (
+          <Badge className="bg-yellow-500/20 text-yellow-300 border-yellow-500/40 flex items-center gap-1">
+            <Star className="w-3 h-3" />
+            Recomendado
+          </Badge>
+        );
+      case 'optional':
+        return (
+          <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/40 flex items-center gap-1">
+            <Lightbulb className="w-3 h-3" />
+            Opcional
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  }, []);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -69,8 +97,6 @@ export function DailyTraining() {
   if (!dailyTraining) {
     return null;
   }
-
-  const progress = (completedModules.size / dailyTraining.modules.length) * 100;
 
   return (
     <div className="space-y-4 lg:space-y-6">
@@ -184,34 +210,6 @@ export function DailyTraining() {
             index === 0 ? 'essential' :
             index === 1 && dailyTraining.modules.length > 1 ? 'recommended' :
             'optional';
-          
-          const getPriorityBadge = useCallback((priority: string) => {
-            switch (priority) {
-              case 'essential':
-                return (
-                  <Badge className="bg-red-500/20 text-red-300 border-red-500/40 flex items-center gap-1">
-                    <Flame className="w-3 h-3" />
-                    Essencial
-                  </Badge>
-                );
-              case 'recommended':
-                return (
-                  <Badge className="bg-yellow-500/20 text-yellow-300 border-yellow-500/40 flex items-center gap-1">
-                    <Star className="w-3 h-3" />
-                    Recomendado
-                  </Badge>
-                );
-              case 'optional':
-                return (
-                  <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/40 flex items-center gap-1">
-                    <Lightbulb className="w-3 h-3" />
-                    Opcional
-                  </Badge>
-                );
-              default:
-                return null;
-            }
-          };
           
           return (
             <motion.div

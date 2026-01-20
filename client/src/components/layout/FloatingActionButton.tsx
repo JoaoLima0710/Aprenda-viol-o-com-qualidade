@@ -10,7 +10,7 @@ import {
   Plus, 
   X, 
   Guitar, 
-  Metronome, 
+  Timer, 
   Mic, 
   Sparkles,
   Music,
@@ -37,7 +37,7 @@ const FAB_ACTIONS: FABAction[] = [
   {
     id: 'metronome',
     label: 'Metrônomo',
-    icon: <Metronome className="w-5 h-5" />,
+    icon: <Timer className="w-5 h-5" />,
     path: '/practice',
     color: 'from-blue-500 to-cyan-500'
   },

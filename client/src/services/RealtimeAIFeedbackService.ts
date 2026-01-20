@@ -67,7 +67,7 @@ const SCALE_NOTES: Record<string, number[]> = {
   'blues': [0, 3, 5, 6, 7, 10],
 };
 
-class RealtimeAIFeedbackService {
+export class RealtimeAIFeedbackService {
   private isInitialized = false;
   private isActive = false;
   private currentContext: PracticeContext | null = null;
