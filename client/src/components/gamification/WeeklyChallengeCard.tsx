@@ -102,8 +102,8 @@ function generateWeeklyChallenge(): WeeklyChallenge {
 export function WeeklyChallengeCard() {
   const { addXP, level } = useGamificationStore();
   const { totalPracticeMinutes } = useProgressionStore();
-  const { masteredChords } = useChordStore();
-  const { masteredScales } = useScaleStore();
+  const { progress: chordProgress } = useChordStore();
+  const { completedScales } = useScaleStore();
   
   const [challenge, setChallenge] = useState<WeeklyChallenge | null>(null);
   const [claimed, setClaimed] = useState(false);
@@ -146,16 +146,15 @@ export function WeeklyChallengeCard() {
     switch (challenge.type) {
       case 'chords':
         // Contar acordes dominados esta semana
-        const weekStart = new Date(challenge.weekStart);
-        // Simplificado: usar total de acordes dominados
-        current = masteredChords.length;
+        // Simplificado: usar total de acordes praticados
+        current = Object.values(chordProgress ?? {}).filter(p => p?.practiced).length;
         break;
       case 'practice_time':
         // Minutos praticados esta semana (simplificado: usar total)
-        current = Math.floor(totalPracticeMinutes);
+        current = Math.floor(totalPracticeMinutes ?? 0);
         break;
       case 'scales':
-        current = masteredScales.length;
+        current = completedScales?.length ?? 0;
         break;
       case 'accuracy':
         // Calcular precisão média (simplificado)
