@@ -4,6 +4,7 @@ import { useChordStore } from './useChordStore';
 import { useScaleProgressionStore } from './useScaleProgressionStore';
 import { useGamificationStore } from './useGamificationStore';
 import { useSongStore } from './useSongStore';
+import { toArray, toSet } from './persistHelpers';
 import { Song, songs } from '@/data/songs';
 
 interface SongUnlockStore {
@@ -161,6 +162,24 @@ export const useSongUnlockStore = create<SongUnlockStore>()(
     {
       name: 'song-unlock-store',
       version: 1,
+      partialize: (state) => ({
+        unlockedSongs: toArray(state.unlockedSongs),
+        masteredSongs: toArray(state.masteredSongs),
+      }),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as {
+          unlockedSongs?: unknown;
+          masteredSongs?: unknown;
+        };
+        const unlockedSongs = toSet<string>(persisted?.unlockedSongs);
+        const masteredSongs = toSet<string>(persisted?.masteredSongs);
+
+        return {
+          ...currentState,
+          unlockedSongs: unlockedSongs.size > 0 ? unlockedSongs : currentState.unlockedSongs,
+          masteredSongs,
+        };
+      },
     }
   )
 );

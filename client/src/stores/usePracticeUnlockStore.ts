@@ -5,6 +5,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { toArray, toSet } from './persistHelpers';
 
 export type PracticeExerciseType = 
   | 'interval-practice'      // Praticar intervalos no violão
@@ -158,6 +159,18 @@ export const usePracticeUnlockStore = create<PracticeUnlockState>()(
     {
       name: 'practice-unlock-store',
       version: 1,
+      partialize: (state) => ({
+        unlockedExercises: toArray(state.unlockedExercises),
+      }),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as { unlockedExercises?: unknown };
+        const unlockedExercises = toSet<PracticeExerciseType>(persisted?.unlockedExercises);
+
+        return {
+          ...currentState,
+          unlockedExercises: unlockedExercises.size > 0 ? unlockedExercises : currentState.unlockedExercises,
+        };
+      },
     }
   )
 );

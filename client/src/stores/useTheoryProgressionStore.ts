@@ -5,6 +5,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { toArray, toSet } from './persistHelpers';
 
 export type TheoryLevel = 'basic' | 'intermediate' | 'advanced';
 
@@ -309,6 +310,26 @@ export const useTheoryProgressionStore = create<TheoryProgressionState>()(
     {
       name: 'theory-progression-store',
       version: 1,
+      partialize: (state) => ({
+        currentLevel: state.currentLevel,
+        moduleProgress: state.moduleProgress,
+        completedModules: toArray(state.completedModules),
+      }),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as {
+          currentLevel?: TheoryLevel;
+          moduleProgress?: Record<string, TheoryModuleProgress>;
+          completedModules?: unknown;
+        };
+        const completedModules = toSet<string>(persisted?.completedModules);
+
+        return {
+          ...currentState,
+          currentLevel: persisted?.currentLevel ?? currentState.currentLevel,
+          moduleProgress: persisted?.moduleProgress ?? currentState.moduleProgress,
+          completedModules: completedModules.size > 0 ? completedModules : currentState.completedModules,
+        };
+      },
     }
   )
 );

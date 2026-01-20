@@ -5,6 +5,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { toArray, toSet } from './persistHelpers';
 
 export interface ChordWeek {
   week: number;
@@ -256,6 +257,43 @@ export const useChordProgressionStore = create<ChordProgressionState>()(
     {
       name: 'chord-progression-store',
       version: 1,
+      partialize: (state) => ({
+        currentWeek: state.currentWeek,
+        unlockedWeeks: toArray(state.unlockedWeeks),
+        weekProgress: Object.fromEntries(
+          Object.entries(state.weekProgress).map(([week, progress]) => [
+            week,
+            {
+              ...progress,
+              chordsCompleted: toArray(progress.chordsCompleted),
+            },
+          ])
+        ),
+      }),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as {
+          currentWeek?: number;
+          unlockedWeeks?: unknown;
+          weekProgress?: Record<string, { chordsCompleted?: unknown }>;
+        };
+        const unlockedWeeks = toSet<number>(persisted?.unlockedWeeks);
+        const weekProgress = Object.fromEntries(
+          Object.entries(persisted?.weekProgress ?? {}).map(([week, progress]) => [
+            week,
+            {
+              ...progress,
+              chordsCompleted: toSet<string>(progress?.chordsCompleted),
+            },
+          ])
+        );
+
+        return {
+          ...currentState,
+          currentWeek: persisted?.currentWeek ?? currentState.currentWeek,
+          unlockedWeeks: unlockedWeeks.size > 0 ? unlockedWeeks : currentState.unlockedWeeks,
+          weekProgress: Object.keys(weekProgress).length > 0 ? weekProgress : currentState.weekProgress,
+        };
+      },
     }
   )
 );
