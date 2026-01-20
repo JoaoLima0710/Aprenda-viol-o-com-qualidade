@@ -32,8 +32,8 @@ interface ProgressMetric {
 }
 
 export function ProgressCard() {
-  const { masteredChords } = useChordStore();
-  const { masteredScales } = useScaleStore();
+  const { progress: chordProgress } = useChordStore();
+  const { completedScales } = useScaleStore();
   const { level, xp } = useGamificationStore();
   const { skills } = useProgressionStore();
   const { getUnlockedSongs } = useSongUnlockStore();
@@ -41,15 +41,17 @@ export function ProgressCard() {
   const [metrics, setMetrics] = useState<ProgressMetric[]>([]);
 
   useEffect(() => {
-    const completedSkills = skills.filter((skill) => skill.mastered);
+    const completedSkills = skills?.filter((skill) => skill.mastered) ?? [];
     const unlockedSongs = getUnlockedSongs();
+    const practicedChordsCount = Object.values(chordProgress ?? {}).filter(p => p?.practiced).length;
+    const completedScalesCount = completedScales?.length ?? 0;
 
     // Calcular métricas
     const newMetrics: ProgressMetric[] = [
       {
         id: 'chords',
         label: 'Acordes Dominados',
-        current: masteredChords.length,
+        current: practicedChordsCount,
         total: 50, // Total de acordes básicos
         icon: <Guitar className="w-5 h-5" />,
         color: 'from-purple-500 to-pink-500',
@@ -58,7 +60,7 @@ export function ProgressCard() {
       {
         id: 'scales',
         label: 'Escalas Aprendidas',
-        current: masteredScales.length,
+        current: completedScalesCount,
         total: 18, // Total de escalas disponíveis
         icon: <Music className="w-5 h-5" />,
         color: 'from-blue-500 to-cyan-500',
@@ -85,7 +87,7 @@ export function ProgressCard() {
     ];
 
     setMetrics(newMetrics);
-  }, [masteredChords, masteredScales, level, skills, getUnlockedSongs]);
+  }, [chordProgress, completedScales, level, skills, getUnlockedSongs]);
 
   const getProgressColor = (percentage: number) => {
     if (percentage >= 80) return 'bg-green-500';
