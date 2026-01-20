@@ -26,7 +26,6 @@ import {
 import { useUserStore } from '@/stores/useUserStore';
 import { useGamificationStore } from '@/stores/useGamificationStore';
 import { Link } from 'wouter';
-import { Target } from 'lucide-react';
 
 interface OnboardingStep {
   id: string;
