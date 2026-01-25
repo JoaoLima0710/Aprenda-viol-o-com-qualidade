@@ -139,27 +139,29 @@ class ChordPlayer {
     }
 
     // Resolver o nome do acorde e montar URL
-    // Estrutura: /samples/chords/{chordName}.mp3
+    // Estrutura: /samples/chords/{chordName}.mp3 (ou .wav como fallback)
     // Exemplos: C.mp3, D.mp3, Am.mp3, C7.mp3
-    const sampleUrl = `/samples/chords/${chordName}.mp3`;
-
-    // Aplicar normalização via tabela estática (ganho leve)
-    // Volume final = volume base * ganho de normalização do acorde
-    // ⚠️ Volume aplicado APENAS aqui, não duplicado em outro lugar
+    // Fallback: tenta .wav se .mp3 não existir
     const normalizationGain = this.getNormalizationGain(chordName);
     const finalVolume = this.volume * normalizationGain;
 
-    // Reproduzir usando AudioBus (ÚNICO método permitido)
-    // AudioBus é responsável por:
-    // - Carregar o sample
-    // - Criar o source
-    // - Agendar o playback
-    // - Aplicar o volume final (sem modificação adicional)
-    const success = await audioBus.playSampleFromUrl({
+    // Tentar .mp3 primeiro, depois .wav como fallback
+    let sampleUrl = `/samples/chords/${chordName}.mp3`;
+    let success = await audioBus.playSampleFromUrl({
       sampleUrl,
       channel: 'chords',
-      volume: finalVolume, // Volume final já calculado: this.volume * gain
+      volume: finalVolume,
     });
+
+    // Se .mp3 não existir, tentar .wav
+    if (!success) {
+      sampleUrl = `/samples/chords/${chordName}.wav`;
+      success = await audioBus.playSampleFromUrl({
+        sampleUrl,
+        channel: 'chords',
+        volume: finalVolume,
+      });
+    }
 
     if (!success) {
       // Fail safe: se sample não existir, não tocar nada (silenciosamente)

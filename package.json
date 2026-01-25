@@ -7,6 +7,7 @@
     "dev": "vite --host",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "build:vercel": "vite build --config vite.config.vercel.ts",
+    "build:ci": "vite build --config vite.config.vercel.ts",
     "start": "NODE_ENV=production node dist/index.js",
     "preview": "vite preview --host",
     "check": "tsc --noEmit",
@@ -14,8 +15,11 @@
     "test": "vitest",
     "test:ci": "vitest run",
     "test:architecture": "vitest run client/src/audio/__tests__/audioArchitecture.guard.test.ts",
+    "test:exports": "vitest run client/src/__tests__/exports.contract.test.ts",
+    "test:samples": "vitest run client/src/audio/__tests__/samples.contract.test.ts",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "ci": "pnpm run test:ci && pnpm run build:ci"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
