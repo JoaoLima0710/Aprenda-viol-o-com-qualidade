@@ -12,6 +12,8 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest",
+    "test:ci": "vitest run",
+    "test:architecture": "vitest run client/src/audio/__tests__/audioArchitecture.guard.test.ts",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"
   },

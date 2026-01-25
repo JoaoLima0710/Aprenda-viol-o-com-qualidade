@@ -1,5 +1,8 @@
 # 🎸 MusicTutor - Aprenda Violão com Gamificação
 
+![CI](https://github.com/SEU_USER/SEU_REPO/actions/workflows/ci.yml/badge.svg)
+<!-- ⚠️ Substitua SEU_USER/SEU_REPO pelo seu usuário e repositório do GitHub -->
+
 Aplicativo web educacional gamificado para aprendizado de violão, com treino de acordes, escalas, músicas brasileiras e sistema completo de XP, níveis, missões e conquistas.
 
 ## 🎯 Características Principais
