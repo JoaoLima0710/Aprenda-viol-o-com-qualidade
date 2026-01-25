@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, RotateCcw, Check, X } from 'lucide-react';
+import { Play, Pause, RotateCcw, Check, X, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { unifiedAudioService } from '@/services/UnifiedAudioService';
@@ -91,49 +91,98 @@ export function PracticeMode({ chords, bpm, onComplete }: PracticeModeProps) {
       // Feedback tátil ao acertar
       const { hapticFeedbackService } = await import('@/services/HapticFeedbackService');
       hapticFeedbackService.success();
+
+      // Feedback sonoro de sucesso (volume baixo para não distrair)
+      feedbackSoundService.playFeedback('success', 0.15);
       
       // CRÍTICO para tablets: Inicializar áudio primeiro
       try {
-        await unifiedAudioService.initialize();
-        await new Promise(resolve => setTimeout(resolve, 50));
-        await unifiedAudioService.playChord(currentChord, 1.5);
+        await unifiedAudioService.ensureInitialized();
+        
+        // Obter AudioContext e inicializar scheduler
+        const audioContext = unifiedAudioService.getAudioContext();
+        if (audioContext) {
+          const { audioContextScheduler } = await import('@/services/AudioContextScheduler');
+          audioContextScheduler.initialize(audioContext);
+          
+          // Tocar acorde usando AudioContext time
+          await unifiedAudioService.playChord(currentChord, 1.5);
+          
+          // Agendar próxima ação usando AudioContext time (1.5s após início do acorde)
+          const currentTime = audioContext.currentTime;
+          audioContextScheduler.scheduleOnce('practice-next-chord', async () => {
+            if (currentChordIndex < chords.length - 1) {
+              setCurrentChordIndex(prev => prev + 1);
+              setFeedback(null);
+            } else {
+              // Practice complete
+              setIsPlaying(false);
+              
+              // Feedback tátil ao completar módulo
+              const { hapticFeedbackService } = await import('@/services/HapticFeedbackService');
+              hapticFeedbackService.complete();
+              
+              // Stop recording and save
+              if (isRecording) {
+                const recording = await audioRecorderService.stopRecording();
+                setIsRecording(false);
+                
+                if (recording && onComplete) {
+                  onComplete(accuracy);
+                }
+              } else if (onComplete) {
+                onComplete(accuracy);
+              }
+            }
+          }, 1.5); // 1.5 segundos após início do acorde
+        } else {
+          // Fallback se AudioContext não estiver disponível
+          await unifiedAudioService.playChord(currentChord, 1.5);
+          setTimeout(async () => {
+            if (currentChordIndex < chords.length - 1) {
+              setCurrentChordIndex(prev => prev + 1);
+              setFeedback(null);
+            } else {
+              setIsPlaying(false);
+              const { hapticFeedbackService } = await import('@/services/HapticFeedbackService');
+              hapticFeedbackService.complete();
+              if (isRecording) {
+                const recording = await audioRecorderService.stopRecording();
+                setIsRecording(false);
+                if (recording && onComplete) {
+                  onComplete(accuracy);
+                }
+              } else if (onComplete) {
+                onComplete(accuracy);
+              }
+            }
+          }, 1500);
+        }
       } catch (error) {
         console.error('Erro ao tocar acorde:', error);
       }
-      
-      // Move to next chord after delay
-      setTimeout(async () => {
-        if (currentChordIndex < chords.length - 1) {
-          setCurrentChordIndex(prev => prev + 1);
-          setFeedback(null);
-        } else {
-          // Practice complete
-          setIsPlaying(false);
-          
-          // Feedback tátil ao completar módulo
-          const { hapticFeedbackService } = await import('@/services/HapticFeedbackService');
-          hapticFeedbackService.complete();
-          
-          // Stop recording and save
-          if (isRecording) {
-            const recording = await audioRecorderService.stopRecording();
-            setIsRecording(false);
-            
-            if (recording && onComplete) {
-              onComplete(accuracy);
-            }
-          } else if (onComplete) {
-            onComplete(accuracy);
-          }
-        }
-      }, 1500);
     } else {
       setFeedback('incorrect');
+      
+      // Feedback sonoro de erro de execução
+      feedbackSoundService.playFeedback('error_execution', 0.12);
+      
+      // Feedback explicativo baseado em tentativas
+      const errorMessages = [
+        'Revise a posição dos dedos. Compare com o diagrama do acorde.',
+        'Verifique se todas as cordas estão soando. Alguma pode estar abafada.',
+        'Pratique formar o acorde mais devagar. Qualidade é mais importante que velocidade.',
+        'Toque cada corda individualmente para identificar qual não está soando corretamente.',
+      ];
+      
+      const messageIndex = Math.min(attempts - score - 1, errorMessages.length - 1);
+      (window as any).__practiceModeFeedbackMessage = errorMessages[messageIndex];
       
       // Clear feedback after delay
       setTimeout(() => {
         setFeedback(null);
-      }, 1000);
+        (window as any).__practiceModeFeedbackMessage = '';
+      }, 2000);
     }
   };
   
@@ -225,33 +274,63 @@ export function PracticeMode({ chords, bpm, onComplete }: PracticeModeProps) {
             </Button>
           </div>
           
-          {/* Feedback */}
+          {/* Feedback Explicativo */}
           <AnimatePresence>
             {feedback && (
               <motion.div
-                className={`flex items-center justify-center gap-2 p-4 rounded-xl ${
+                className={`p-4 rounded-xl border-2 ${
                   feedback === 'correct'
-                    ? 'bg-[#10b981]/20 border border-[#10b981]/50'
-                    : 'bg-[#ef4444]/20 border border-[#ef4444]/50'
+                    ? 'bg-[#10b981]/10 border-[#10b981]/50'
+                    : 'bg-[#ef4444]/10 border-[#ef4444]/50'
                 }`}
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.8, opacity: 0 }}
               >
-                {feedback === 'correct' ? (
-                  <>
-                    <Check className="w-6 h-6 text-[#10b981]" />
-                    <span className="text-lg font-bold text-[#10b981]">Correto!</span>
-                  </>
-                ) : (
-                  <>
-                    <X className="w-6 h-6 text-[#ef4444]" />
-                    <span className="text-lg font-bold text-[#ef4444]">Tente novamente</span>
-                  </>
-                )}
+                <div className="flex items-start gap-3">
+                  {feedback === 'correct' ? (
+                    <>
+                      <Check className="w-6 h-6 text-[#10b981] mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-lg font-bold text-[#10b981] mb-1">Correto! 🎉</p>
+                        <p className="text-sm text-gray-300">Ótimo trabalho! Continue para o próximo acorde.</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <X className="w-6 h-6 text-[#ef4444] mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-lg font-bold text-[#ef4444] mb-1">Precisa ajustar</p>
+                        {(window as any).__practiceModeFeedbackMessage && (
+                          <p className="text-sm text-gray-300">{(window as any).__practiceModeFeedbackMessage}</p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Meta Clara do Exercício */}
+          <div className="mb-6 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="w-5 h-5 text-blue-400" />
+              <h4 className="text-sm font-bold text-white">Meta do Exercício</h4>
+            </div>
+            <div className="space-y-2 text-sm text-gray-300">
+              <p>
+                <strong className="text-white">Objetivo:</strong> Tocar todos os acordes da sequência corretamente.
+              </p>
+              <p>
+                <strong className="text-white">Para melhorar:</strong> Foque em{' '}
+                <strong className="text-green-400">qualidade do som</strong> - todas as cordas devem soar limpas, sem zumbido.
+              </p>
+              <p className="text-xs text-gray-400 mt-2">
+                💡 <strong>Dica:</strong> Se alguma corda não está soando, verifique se está pressionando com força suficiente e na posição correta!
+              </p>
+            </div>
+          </div>
           
           {/* Practice Buttons */}
           {!feedback && (

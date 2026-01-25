@@ -289,6 +289,11 @@ export function GuidedSession({ onComplete, onExit }: GuidedSessionProps) {
   }, [currentStepIndex, isPlaying, currentStep]);
 
   const startSession = () => {
+    // Feedback sonoro de início de treino
+    import('@/services/ActionFeedbackService').then(({ actionFeedbackService }) => {
+      actionFeedbackService.playActionFeedback('training_start');
+    });
+    
     setIsPlaying(true);
     setSessionStartTime(new Date());
     setStepStartTime(new Date());
@@ -300,6 +305,11 @@ export function GuidedSession({ onComplete, onExit }: GuidedSessionProps) {
 
   const nextStep = () => {
     if (currentStepIndex < sessionSteps.length - 1) {
+      // Feedback sonoro de avanço de etapa
+      import('@/services/ActionFeedbackService').then(({ actionFeedbackService }) => {
+        actionFeedbackService.playActionFeedback('step_progress');
+      });
+      
       setCurrentStepIndex(prev => prev + 1);
       setStepStartTime(new Date());
     } else {

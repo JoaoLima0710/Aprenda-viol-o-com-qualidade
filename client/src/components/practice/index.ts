@@ -9,6 +9,8 @@ export { EssentialIntervalTraining } from './EssentialIntervalTraining';
 export { MajorMinorChordTraining } from './MajorMinorChordTraining';
 export { ActiveRhythmTraining } from './ActiveRhythmTraining';
 export { ShortTermMemoryTraining } from './ShortTermMemoryTraining';
+export { ActiveAuditoryPerception } from './ActiveAuditoryPerception';
+export { PracticeMetrics } from './PracticeMetrics';
 export { PhysicalPreparation } from './PhysicalPreparation';
 export { ContextualEarTraining } from './ContextualEarTraining';
 export { TranscriptionExercise } from './TranscriptionExercise';

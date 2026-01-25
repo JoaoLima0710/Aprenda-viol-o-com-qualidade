@@ -113,6 +113,41 @@ class MetronomeService {
     this.currentBeat = 0;
     this.isPlaying = false;
   }
+
+  /**
+   * Para o metrônomo com fade-out suave
+   * @param fadeOutDuration - Duração do fade-out em segundos (padrão: 0.15s)
+   */
+  async fadeOut(fadeOutDuration: number = 0.15): Promise<void> {
+    if (!this.isPlaying || !this.synth) {
+      return;
+    }
+
+    try {
+      // Aplicar fade-out no volume do synth
+      const now = Tone.now();
+      const currentVolume = this.synth.volume.value;
+      
+      // Fade-out linear
+      this.synth.volume.setValueAtTime(currentVolume, now);
+      this.synth.volume.linearRampToValueAtTime(-Infinity, now + fadeOutDuration);
+
+      // Aguardar fade-out terminar
+      await new Promise(resolve => setTimeout(resolve, fadeOutDuration * 1000 + 50));
+
+      // Parar metrônomo após fade-out
+      this.stop();
+      
+      // Restaurar volume
+      if (this.synth) {
+        this.synth.volume.setValueAtTime(-10, Tone.now());
+      }
+    } catch (error) {
+      console.error('[MetronomeService] Erro no fade-out, usando stop abrupto:', error);
+      // Fallback para stop abrupto
+      this.stop();
+    }
+  }
   
   setBpm(bpm: number) {
     this.currentBpm = bpm;

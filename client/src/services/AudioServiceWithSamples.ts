@@ -73,7 +73,9 @@ class AudioServiceWithSamples {
       
       if (!loadSuccess && this.loadErrorCount >= this.maxLoadErrors) {
         console.warn('⚠️ Samples failed to load multiple times, will use fallback');
-        throw new Error('Samples failed to load');
+        const sampleError = new (await import('@/errors/AudioErrors')).SampleLoadError('Samples failed to load');
+        await (await import('./AudioResilienceService')).audioResilienceService.handleFailure(sampleError, 'initialize', true);
+        throw sampleError;
       }
       
       this.isInitialized = true;
@@ -89,6 +91,11 @@ class AudioServiceWithSamples {
     } catch (error) {
       console.error('❌ Error initializing AudioServiceWithSamples:', error);
       this.loadErrorCount++;
+      
+      // Reportar falha ao AudioResilienceService
+      const { audioResilienceService } = await import('./AudioResilienceService');
+      await audioResilienceService.handleFailure(error, 'initialize', true);
+      
       return false;
     }
   }

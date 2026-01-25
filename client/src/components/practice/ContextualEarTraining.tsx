@@ -24,6 +24,11 @@ import { unifiedAudioService } from '@/services/UnifiedAudioService';
 import { toast } from 'sonner';
 import { songs, Song, getSongById } from '@/data/songs';
 import { useGamificationStore } from '@/stores/useGamificationStore';
+import {
+  STIMULUS_DURATIONS,
+  STIMULUS_SPACING,
+  CHORD_FORMATION_DELAYS,
+} from '@/services/AuditoryStimulusConfig';
 
 interface ContextualExercise {
   songId: string;
@@ -130,31 +135,29 @@ export function ContextualEarTraining() {
         // Mapear acorde para notas (simplificado)
         const chordNotes = getChordNotes(chordName);
         
-        // Tocar acorde (notas simultâneas com delay otimizado para percepção auditiva)
-        // Duração otimizada: 1.0s - suficiente para distinguir, não muito longo
-        const chordDuration = 1.0;
+        // Usar durações e espaçamentos padronizados para máxima clareza
+        const chordDuration = STIMULUS_DURATIONS.chord;
         
         const playPromises = chordNotes.map((note, index) => {
           return new Promise<void>((resolve) => {
             setTimeout(async () => {
               try {
-                // Duração consistente para todos os acordes na progressão
+                // Duração padronizada para todos os acordes na progressão
                 await unifiedAudioService.playNote(note, chordDuration);
                 resolve();
               } catch (error) {
                 console.error(`Erro ao tocar nota ${note}:`, error);
                 resolve();
               }
-            }, index * 18); // 18ms de delay - otimizado para clareza auditiva
+            }, index * CHORD_FORMATION_DELAYS.betweenChordNotes); // Delay padronizado
           });
         });
         
         await Promise.all(playPromises);
         
-        // Pausa entre acordes: suficiente para distinguir cada acorde
-        // Delay otimizado para percepção auditiva
+        // Espaçamento padronizado entre acordes para máxima clareza
         if (i < currentExercise.progression.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 650));
+          await new Promise(resolve => setTimeout(resolve, STIMULUS_SPACING.betweenProgressionChords));
         }
       }
     } catch (error) {

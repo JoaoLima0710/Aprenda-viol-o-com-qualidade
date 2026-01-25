@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { AudioInitButton } from "./components/audio/AudioInitButton";
 import { VolumeControl } from "./components/audio/VolumeControl";
+import { AudioErrorDisplay } from "./components/audio/AudioErrorDisplay";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { InstallPWA } from '@/components/InstallPWA';
@@ -12,6 +13,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { useUserStore } from "./stores/useUserStore";
 import { useEffect } from "react";
 import { FloatingActionButton } from "./components/layout/FloatingActionButton";
+import { useAudioNavigationGuard } from './hooks/useAudioNavigationGuard';
 
 // Lazy load pages for code splitting
 const Home = lazy(() => import("./pages/Home"));
@@ -46,6 +48,9 @@ function PageLoader() {
 
 function Router() {
   const { isAuthenticated, refreshUser } = useUserStore();
+  
+  // Proteger áudio durante navegação
+  useAudioNavigationGuard();
 
   useEffect(() => {
     // Verificar autenticação ao carregar
@@ -97,6 +102,7 @@ function App() {
             <Router />
             <FloatingActionButton />
             <InstallPWA />
+            <AudioErrorDisplay compact={true} />
             <Toaster />
           </div>
         </TooltipProvider>

@@ -10,6 +10,10 @@ import { Card } from '@/components/ui/card';
 import { Play, Brain, CheckCircle2, XCircle, Volume2, RotateCcw } from 'lucide-react';
 import { unifiedAudioService } from '@/services/UnifiedAudioService';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  STIMULUS_DURATIONS,
+  STIMULUS_SPACING,
+} from '@/services/AuditoryStimulusConfig';
 
 // Notas básicas para sequências (oitava 4)
 const BASIC_NOTES = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4'];
@@ -94,8 +98,9 @@ export function ShortTermMemoryTraining() {
       await unifiedAudioService.ensureInitialized();
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      const noteDuration = 0.6; // Duração clara para memória
-      const delayBetweenNotes = 400; // Delay suficiente para processar
+      // Usar durações e espaçamentos padronizados para máxima clareza
+      const noteDuration = STIMULUS_DURATIONS.memorySequence;
+      const delayBetweenNotes = STIMULUS_SPACING.betweenMemoryNotes;
       
       console.log('🧠 [Memória Auditiva] Tocando sequência:', sequenceToPlay);
       
@@ -103,7 +108,7 @@ export function ShortTermMemoryTraining() {
         const note = sequenceToPlay[i];
         await unifiedAudioService.playNote(note, noteDuration);
         
-        // Delay entre notas (exceto após a última)
+        // Delay padronizado entre notas (exceto após a última)
         if (i < sequenceToPlay.length - 1) {
           await new Promise(resolve => setTimeout(resolve, delayBetweenNotes));
         }

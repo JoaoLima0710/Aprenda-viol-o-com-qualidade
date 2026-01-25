@@ -4,6 +4,11 @@ import { Card } from '@/components/ui/card';
 import { Play, Volume2, CheckCircle2, XCircle, Trophy, Target } from 'lucide-react';
 import { unifiedAudioService } from '@/services/UnifiedAudioService';
 import { toast } from 'sonner';
+import {
+  STIMULUS_DURATIONS,
+  STIMULUS_SPACING,
+  CHORD_FORMATION_DELAYS,
+} from '@/services/AuditoryStimulusConfig';
 
 type ExerciseType = 'intervals' | 'chords' | 'melodies';
 
@@ -113,6 +118,10 @@ export function EarTraining() {
     setIsPlaying(true);
     
     try {
+      // Definir contexto de percepção auditiva
+      const { audioPriorityManager } = await import('@/services/AudioPriorityManager');
+      audioPriorityManager.setContext('auditory_perception');
+      
       // Garantir que o audioService está inicializado
       console.log('🎵 Garantindo inicialização do audio service para treino de ouvido...');
       
@@ -135,21 +144,21 @@ export function EarTraining() {
         console.log('🎸 [Ear Training] Tocando acorde:', notes);
         
         // Duração otimizada para acordes: suficiente para distinguir, não muito longo
-        const chordDuration = 1.2;
+        // Usar duração padronizada para acordes
         
-        // Tocar todas as notas quase simultaneamente (delay de 15ms entre cada para clareza)
+        // Tocar todas as notas quase simultaneamente com delay padronizado
         const playPromises = notes.map((note, index) => {
           return new Promise<void>((resolve) => {
             setTimeout(async () => {
               try {
-                // Duração consistente para todos os acordes
-                await unifiedAudioService.playNote(note, chordDuration);
+                // Duração padronizada para todos os acordes
+                await unifiedAudioService.playNote(note, STIMULUS_DURATIONS.chord);
                 resolve();
               } catch (error) {
                 console.error(`Erro ao tocar nota ${note}:`, error);
                 resolve();
               }
-            }, index * 15); // 15ms de delay para melhor separação auditiva
+            }, index * CHORD_FORMATION_DELAYS.betweenChordNotes); // Delay padronizado
           });
         });
         
@@ -157,22 +166,21 @@ export function EarTraining() {
         console.log('✅ [Ear Training] Acorde tocado com sucesso');
         
       } else if (exerciseType === 'intervals') {
-        // Para intervalos, tocar as duas notas sequencialmente com duração otimizada
+        // Para intervalos, tocar as duas notas sequencialmente com duração padronizada
         console.log('🎵 [Ear Training] Tocando intervalo:', notes);
         
-        // Duração otimizada para intervalos: clara e distinta
-        const intervalDuration = 0.9;
-        // Delay entre notas: suficiente para distinguir, não muito longo
-        const intervalDelay = 450;
+        // Usar durações e espaçamentos padronizados para máxima clareza
+        const intervalDuration = STIMULUS_DURATIONS.interval;
+        const intervalDelay = STIMULUS_SPACING.betweenIntervals;
         
         for (let i = 0; i < notes.length; i++) {
           const note = notes[i];
           console.log(`🎼 [Ear Training] Tocando nota ${i + 1}/${notes.length}:`, note);
           
-          // Duração consistente para melhor comparação entre intervalos
+          // Duração padronizada para melhor comparação entre intervalos
           await unifiedAudioService.playNote(note, intervalDuration);
           
-          // Delay entre notas (exceto após a última)
+          // Delay padronizado entre notas (exceto após a última)
           if (i < notes.length - 1) {
             await new Promise(resolve => setTimeout(resolve, intervalDelay));
           }
@@ -180,22 +188,21 @@ export function EarTraining() {
         console.log('✅ [Ear Training] Intervalo tocado com sucesso');
         
       } else {
-        // Para melodias, tocar sequência de notas com duração otimizada
+        // Para melodias, tocar sequência de notas com duração padronizada
         console.log('🎶 [Ear Training] Tocando melodia:', notes);
         
-        // Duração otimizada para melodias: clara mas fluida
-        const melodyDuration = 0.7;
-        // Delay entre notas: ritmo natural
-        const melodyDelay = 550;
+        // Usar durações e espaçamentos padronizados para máxima clareza
+        const melodyDuration = STIMULUS_DURATIONS.singleNote;
+        const melodyDelay = STIMULUS_SPACING.betweenNotes;
         
         for (let i = 0; i < notes.length; i++) {
           const note = notes[i];
           console.log(`🎼 [Ear Training] Tocando nota ${i + 1}/${notes.length}:`, note);
           
-          // Duração consistente para melhor reconhecimento melódico
+          // Duração padronizada para melhor reconhecimento melódico
           await unifiedAudioService.playNote(note, melodyDuration);
           
-          // Delay entre notas (exceto após a última)
+          // Delay padronizado entre notas (exceto após a última)
           if (i < notes.length - 1) {
             await new Promise(resolve => setTimeout(resolve, melodyDelay));
           }
@@ -210,6 +217,10 @@ export function EarTraining() {
       });
     } finally {
       setIsPlaying(false);
+      // Remover contexto quando terminar
+      import('@/services/AudioPriorityManager').then(({ audioPriorityManager }) => {
+        audioPriorityManager.setContext(null);
+      });
     }
   };
 

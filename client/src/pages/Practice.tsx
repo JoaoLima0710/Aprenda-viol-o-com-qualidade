@@ -13,6 +13,7 @@ import {
   MajorMinorChordTraining,
   ActiveRhythmTraining,
   ShortTermMemoryTraining,
+  ActiveAuditoryPerception,
   PhysicalPreparation,
   ContextualEarTraining,
   TranscriptionExercise,
@@ -23,6 +24,7 @@ import {
 } from '@/components/practice';
 import { RealtimeChordDetector } from '@/components/chord-detection/RealtimeChordDetector';
 import { AdaptiveDifficultyRecommendations } from '@/components/adaptive/AdaptiveDifficultyRecommendations';
+import { PracticeMetrics } from '@/components/practice/PracticeMetrics';
 import { useGamificationStore } from '@/stores/useGamificationStore';
 import { useUserStore } from '@/stores/useUserStore';
 import { usePracticeUnlockStore, PRACTICE_EXERCISES } from '@/stores/usePracticeUnlockStore';
@@ -121,6 +123,11 @@ export default function Practice() {
               </div>
               <p className="text-gray-400">Metrônomo e outras ferramentas para melhorar sua prática</p>
             </header>
+
+            {/* Métricas de Progresso */}
+            <section>
+              <PracticeMetrics practiceType="general" />
+            </section>
 
             {/* Preparação Física - Recomendado para Iniciantes */}
             <section>
@@ -432,6 +439,15 @@ export default function Practice() {
               <ShortTermMemoryTraining />
             </div>
 
+            {/* Percepção Auditiva Ativa */}
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-4">🎵 Percepção Auditiva Ativa</h2>
+              <p className="text-sm text-gray-400 mb-4">
+                Exercícios progressivos usando AudioBus - um som por vez, feedback educativo
+              </p>
+              <ActiveAuditoryPerception />
+            </div>
+
             {/* Ear Training */}
             <div>
               <h2 className="text-2xl font-bold text-white mb-4">🎵 Treino de Ouvido Clássico</h2>
@@ -672,6 +688,15 @@ export default function Practice() {
               Desenvolva retenção sonora - lembre-se de sequências curtas
             </p>
             <ShortTermMemoryTraining />
+          </div>
+
+          {/* Percepção Auditiva Ativa - Mobile */}
+          <div>
+            <h2 className="text-lg font-bold text-white mb-3">🎵 Percepção Auditiva Ativa</h2>
+            <p className="text-xs text-gray-400 mb-3">
+              Exercícios progressivos usando AudioBus
+            </p>
+            <ActiveAuditoryPerception />
           </div>
 
           <div>

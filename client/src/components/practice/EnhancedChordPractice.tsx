@@ -18,6 +18,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { audioPriorityManager } from '@/services/AudioPriorityManager';
 import {
   CheckCircle2,
   XCircle,
@@ -31,6 +32,7 @@ import {
   AlertCircle,
   Info,
   Lightbulb,
+  VolumeX,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -38,7 +40,9 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useGamificationStore } from '@/stores/useGamificationStore';
 import { useProgressionStore } from '@/stores/useProgressionStore';
+import { usePracticeMetricsStore } from '@/stores/usePracticeMetricsStore';
 import { unifiedAudioService } from '@/services/UnifiedAudioService';
+import { feedbackSoundService } from '@/services/FeedbackSoundService';
 import type { Chord } from '@/data/chords';
 
 interface ChordFinger {
@@ -160,6 +164,8 @@ export function EnhancedChordPractice({
   const [currentRep, setCurrentRep] = useState(0);
   const [consecutiveSuccesses, setConsecutiveSuccesses] = useState(0);
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState<string>('');
+  const [feedbackType, setFeedbackType] = useState<'correct' | 'muted_string' | 'wrong_fingering' | 'timing' | 'general' | null>(null);
   const [showHint, setShowHint] = useState(true);
   const [timer, setTimer] = useState(0);
   const [bestTime, setBestTime] = useState<number | null>(null);
@@ -173,6 +179,7 @@ export function EnhancedChordPractice({
 
   const { addXP } = useGamificationStore();
   const { updateSkillProgress } = useProgressionStore();
+  const { recordSession } = usePracticeMetricsStore();
 
   // Identificar cordas críticas e dedos com risco de erro
   const { criticalStrings, errorProneFingers } = useMemo(
@@ -220,11 +227,83 @@ export function EnhancedChordPractice({
     }
   }, [lastAttempt]);
 
+  // Gerar feedback explicativo baseado no erro
+  const getExplanatoryFeedback = useCallback((isCorrect: boolean, attemptNumber: number): { message: string; type: 'correct' | 'muted_string' | 'wrong_fingering' | 'timing' | 'general' } => {
+    if (isCorrect) {
+      return {
+        message: 'Perfeito! Todas as cordas soaram limpas. Continue assim!',
+        type: 'correct'
+      };
+    }
+
+    // Gerar feedback específico baseado em padrões comuns de erro
+    const errorPatterns = [
+      {
+        type: 'muted_string' as const,
+        messages: [
+          'Alguma corda está abafada. Verifique se está pressionando com a ponta dos dedos, não com a polpa.',
+          'Corda abafada detectada. Pressione mais perto do traste (não no meio) para melhor som.',
+          'Alguma corda não está soando. Aumente a pressão dos dedos e verifique se não está tocando outras cordas acidentalmente.'
+        ]
+      },
+      {
+        type: 'wrong_fingering' as const,
+        messages: [
+          'Posição dos dedos incorreta. Verifique o diagrama acima e compare com sua mão.',
+          'Dedos na posição errada. Foque especialmente nas cordas críticas destacadas em amarelo.',
+          'Dedilhado incorreto. Pratique posicionar um dedo por vez antes de formar o acorde completo.'
+        ]
+      },
+      {
+        type: 'timing' as const,
+        messages: [
+          'Tempo de execução pode melhorar. Pratique formar o acorde mais rápido mantendo a qualidade.',
+          'Foque em formar o acorde de forma mais fluida. A velocidade vem com a prática.'
+        ]
+      },
+      {
+        type: 'general' as const,
+        messages: [
+          'Revise a posição dos dedos. Compare com o diagrama e ajuste onde necessário.',
+          'Toque cada corda individualmente para verificar se todas estão soando corretamente.',
+          'Pratique mais devagar. Forme o acorde com cuidado antes de tocar todas as cordas.'
+        ]
+      }
+    ];
+
+    // Selecionar tipo de erro baseado em tentativas anteriores e cordas críticas
+    let selectedType: 'muted_string' | 'wrong_fingering' | 'timing' | 'general' = 'general';
+    
+    if (errors > 0 && criticalStrings.length > 0) {
+      // Se já errou antes e há cordas críticas, provavelmente é problema de dedilhado
+      selectedType = 'wrong_fingering';
+    } else if (errors > 2) {
+      // Muitos erros = provavelmente cordas abafadas
+      selectedType = 'muted_string';
+    } else {
+      // Primeiros erros = feedback geral
+      selectedType = 'general';
+    }
+
+    const pattern = errorPatterns.find(p => p.type === selectedType) || errorPatterns[3];
+    const messageIndex = Math.min(attemptNumber - 1, pattern.messages.length - 1);
+    
+    return {
+      message: pattern.messages[messageIndex],
+      type: selectedType
+    };
+  }, [errors, criticalStrings]);
+
   // Simular detecção de acorde (pode integrar com detecção real depois)
   const handleChordAttempt = useCallback(
     (correct: boolean) => {
       setLastAttempt(correct ? 'correct' : 'incorrect');
       setFeedback(correct ? 'correct' : 'incorrect');
+
+      // Gerar feedback explicativo
+      const explanatoryFeedback = getExplanatoryFeedback(correct, errors + 1);
+      setFeedbackMessage(explanatoryFeedback.message);
+      setFeedbackType(explanatoryFeedback.type);
 
       if (correct) {
         // Feedback tátil ao acertar
@@ -269,22 +348,46 @@ export function EnhancedChordPractice({
             const progress = Math.min(100, finalAccuracy);
             updateSkillProgress(skillId, progress, finalAccuracy);
 
+            // Registrar sessão nas métricas
+            const totalAttempts = targetRepetitions * 3; // 3 tentativas por repetição
+            const correctAttempts = totalAttempts - errors;
+            const consistency = consecutiveSuccesses > 0 
+              ? Math.round((consecutiveSuccesses / (consecutiveSuccesses + errors)) * 100)
+              : 0;
+            
+            recordSession({
+              type: 'chord',
+              duration: Math.round(timer / 1000), // Converter para segundos
+              accuracy: finalAccuracy,
+              attempts: totalAttempts,
+              correct: correctAttempts,
+              consistency: Math.max(consistency, finalAccuracy), // Usar acurácia como fallback
+              metadata: {
+                chordName: chord.name,
+              },
+            });
+
             onComplete(finalAccuracy, timer);
           }
         }
       } else {
+        // Feedback sonoro de erro de execução (volume baixo para não distrair)
+        feedbackSoundService.playFeedback('error_execution', 0.12);
+
         setStreak(0);
         setErrors((e) => e + 1);
         setConsecutiveSuccesses(0); // Reset contador de sucessos consecutivos
       }
 
-      // Limpar feedback após 1.5 segundos
+      // Limpar feedback após 2.5 segundos (mais tempo para ler feedback explicativo)
       feedbackTimeoutRef.current = setTimeout(() => {
         setFeedback(null);
+        setFeedbackMessage('');
+        setFeedbackType(null);
         if (correct && consecutiveSuccesses + 1 >= 3) {
           setTimer(0); // Reset timer apenas quando completar uma repetição válida
         }
-      }, 1500);
+      }, 2500);
     },
     [
       timer,
@@ -311,12 +414,29 @@ export function EnhancedChordPractice({
     }
   };
 
-  // Reiniciar exercício
+  // Definir contexto de treino quando entrar na fase de prática
+  useEffect(() => {
+    if (phase === 'practice') {
+      audioPriorityManager.setContext('training');
+    } else if (phase === 'complete') {
+      audioPriorityManager.setContext(null);
+    }
+    // Cleanup: remover contexto ao desmontar
+    return () => {
+      if (phase === 'practice') {
+        audioPriorityManager.setContext(null);
+      }
+    };
+  }, [phase]);
+
+  // Reiniciar exercício com variação controlada
   const restart = () => {
     setPhase('learn');
     setCurrentRep(0);
     setConsecutiveSuccesses(0);
     setFeedback(null);
+    setFeedbackMessage('');
+    setFeedbackType(null);
     setShowHint(true);
     setTimer(0);
     setBestTime(null);
@@ -497,20 +617,28 @@ export function EnhancedChordPractice({
           </div>
         </div>
 
-        {/* Feedback Visual */}
+        {/* Feedback Visual e Explicativo */}
         <AnimatePresence>
           {feedback && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
-              className={`absolute inset-0 flex items-center justify-center rounded-lg
-                ${feedback === 'correct' ? 'bg-green-500/20' : 'bg-red-500/20'}`}
+              className={`absolute inset-0 flex flex-col items-center justify-center rounded-lg p-4
+                ${feedback === 'correct' 
+                  ? 'bg-green-500/20 border-2 border-green-500/50' 
+                  : 'bg-red-500/20 border-2 border-red-500/50'}`}
             >
               {feedback === 'correct' ? (
-                <CheckCircle2 className="w-20 h-20 text-green-400" />
+                <>
+                  <CheckCircle2 className="w-16 h-16 text-green-400 mb-2" />
+                  <p className="text-green-400 font-semibold text-center">Correto!</p>
+                </>
               ) : (
-                <XCircle className="w-20 h-20 text-red-400" />
+                <>
+                  <XCircle className="w-16 h-16 text-red-400 mb-2" />
+                  <p className="text-red-400 font-semibold text-center mb-1">Precisa ajustar</p>
+                </>
               )}
             </motion.div>
           )}
@@ -668,11 +796,90 @@ export function EnhancedChordPractice({
         )}
       </div>
 
-      {/* Dica de feedback rápido */}
+      {/* Feedback Explicativo */}
+      <AnimatePresence>
+        {feedback && feedbackMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className={`mt-4 p-4 rounded-lg border-2 ${
+              feedback === 'correct'
+                ? 'bg-green-500/10 border-green-500/30'
+                : feedbackType === 'muted_string'
+                ? 'bg-orange-500/10 border-orange-500/30'
+                : feedbackType === 'wrong_fingering'
+                ? 'bg-blue-500/10 border-blue-500/30'
+                : 'bg-red-500/10 border-red-500/30'
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              {feedback === 'correct' ? (
+                <CheckCircle2 className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+              ) : feedbackType === 'muted_string' ? (
+                <VolumeX className="w-5 h-5 text-orange-400 mt-0.5 flex-shrink-0" />
+              ) : feedbackType === 'wrong_fingering' ? (
+                <AlertCircle className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
+              ) : (
+                <XCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+              )}
+              <div className="flex-1">
+                <p className={`text-sm font-semibold mb-1 ${
+                  feedback === 'correct'
+                    ? 'text-green-400'
+                    : feedbackType === 'muted_string'
+                    ? 'text-orange-400'
+                    : feedbackType === 'wrong_fingering'
+                    ? 'text-blue-400'
+                    : 'text-red-400'
+                }`}>
+                  {feedback === 'correct' ? 'Ótimo!' : feedbackType === 'muted_string' ? 'Corda Abafada' : feedbackType === 'wrong_fingering' ? 'Posição dos Dedos' : 'Ajuste Necessário'}
+                </p>
+                <p className="text-sm text-gray-300">{feedbackMessage}</p>
+                {feedback !== 'correct' && feedbackType === 'muted_string' && criticalStrings.length > 0 && (
+                  <p className="text-xs text-orange-300 mt-2">
+                    💡 Dica: Preste atenção especial nas cordas {criticalStrings.join(', ')} - elas são críticas para este acorde!
+                  </p>
+                )}
+                {feedback !== 'correct' && feedbackType === 'wrong_fingering' && errorProneFingers.length > 0 && (
+                  <p className="text-xs text-blue-300 mt-2">
+                    💡 Dica: Os dedos {errorProneFingers.map(f => fingerNames[f]).join(', ')} são os mais desafiadores neste acorde. Pratique-os separadamente!
+                  </p>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Meta Clara do Exercício */}
       {phase === 'practice' && (
+        <div className="mt-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
+          <div className="flex items-center gap-2 mb-2">
+            <Target className="w-5 h-5 text-blue-400" />
+            <h4 className="text-sm font-bold text-white">Meta do Exercício</h4>
+          </div>
+          <div className="space-y-2 text-sm text-gray-300">
+            <p>
+              <strong className="text-white">Objetivo:</strong> Executar o acorde {chord.name} corretamente{' '}
+              <strong className="text-blue-400">{targetRepetitions} vezes</strong> consecutivas.
+            </p>
+            <p>
+              <strong className="text-white">Requisito:</strong> Cada repetição precisa de{' '}
+              <strong className="text-green-400">3 execuções consecutivas corretas</strong> para contar.
+            </p>
+            <p className="text-xs text-gray-400 mt-2">
+              💡 <strong>Dica:</strong> Foque em qualidade, não velocidade. Um acorde limpo é melhor que vários rápidos com erros!
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Dica de feedback rápido */}
+      {phase === 'practice' && !feedback && (
         <p className="text-center text-xs text-gray-500 mt-4">
           Toque o acorde e clique em "Acertei" se o som estiver limpo, ou "Errei" se houver
-          zumbido. Você precisa de 3 execuções consecutivas corretas para cada repetição contar.
+          zumbido ou cordas abafadas. Você precisa de 3 execuções consecutivas corretas para cada repetição contar.
         </p>
       )}
     </Card>

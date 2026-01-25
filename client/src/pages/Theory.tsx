@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAudio } from '@/hooks/useAudio';
 import { useChordPlayer } from '@/hooks/useChordPlayer';
 import { AudioPlayChordButton } from '@/components/audio/AudioPlayChordButton';
+import { unifiedAudioService } from '@/services/UnifiedAudioService';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { MobileSidebar } from '@/components/layout/MobileSidebar';
@@ -472,23 +473,52 @@ const THEORY_MODULES: TheoryModule[] = [
             </div>
           </div>
 
-          {/* MECANISMO DE FIXAÇÃO: Exercício Simples */}
-          <div className="mt-6 p-5 rounded-lg bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30">
-            <div className="flex items-center gap-2 mb-4">
-              <Target className="w-5 h-5 text-indigo-400" />
-              <h4 className="text-lg font-bold text-white">Fixação: Teste seu conhecimento</h4>
+          {/* MECANISMO DE FIXAÇÃO: Exercícios Simples */}
+          <div className="mt-6 space-y-4">
+            <div className="p-5 rounded-lg bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30">
+              <div className="flex items-center gap-2 mb-4">
+                <Target className="w-5 h-5 text-indigo-400" />
+                <h4 className="text-lg font-bold text-white">Fixação: Teste seu conhecimento</h4>
+              </div>
+              
+              <div className="space-y-4">
+                <SimpleFixationExercise
+                  question="Qual é a ordem de percepção de erros quando você toca?"
+                  options={[
+                    "Ritmo → Melodia → Harmonia",
+                    "Melodia → Ritmo → Harmonia",
+                    "Harmonia → Ritmo → Melodia",
+                    "Todas são percebidas igualmente"
+                  ]}
+                  correctAnswer={0}
+                  explanation="O ritmo é o primeiro erro que as pessoas percebem. Por isso, sempre comece praticando o ritmo antes de se preocupar com notas ou acordes!"
+                />
+                
+                <SimpleFixationExercise
+                  question="Qual dos 3 elementos da música é o 'quando' tocar?"
+                  options={[
+                    "Ritmo",
+                    "Melodia",
+                    "Harmonia",
+                    "Todos os três"
+                  ]}
+                  correctAnswer={0}
+                  explanation="O ritmo é o 'quando' tocar - organiza o tempo e a batida. Melodia é o 'o quê' tocar (notas), e Harmonia é o 'clima' (acordes)."
+                />
+                
+                <SimpleFixationExercise
+                  question="Por que é importante começar praticando o ritmo?"
+                  options={[
+                    "Porque é o mais difícil",
+                    "Porque é o primeiro erro que as pessoas percebem - se o ritmo estiver certo, mesmo com nota errada, já soa melhor",
+                    "Porque é o mais fácil",
+                    "Não é importante"
+                  ]}
+                  correctAnswer={1}
+                  explanation="O ritmo é o primeiro erro perceptível. Se você tocar no tempo certo, mesmo com nota ou acorde errado, já soa muito melhor do que o contrário!"
+                />
+              </div>
             </div>
-            <SimpleFixationExercise
-              question="Qual é a ordem de percepção de erros quando você toca?"
-              options={[
-                "Ritmo → Melodia → Harmonia",
-                "Melodia → Ritmo → Harmonia",
-                "Harmonia → Ritmo → Melodia",
-                "Todas são percebidas igualmente"
-              ]}
-              correctAnswer={0}
-              explanation="O ritmo é o primeiro erro que as pessoas percebem. Por isso, sempre comece praticando o ritmo antes de se preocupar com notas ou acordes!"
-            />
           </div>
 
           {/* CONCEITOS-CHAVE */}
@@ -896,23 +926,52 @@ const THEORY_MODULES: TheoryModule[] = [
             </div>
           </div>
 
-          {/* MECANISMO DE FIXAÇÃO: Exercício Simples */}
-          <div className="mt-6 p-5 rounded-lg bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30">
-            <div className="flex items-center gap-2 mb-4">
-              <Target className="w-5 h-5 text-indigo-400" />
-              <h4 className="text-lg font-bold text-white">Fixação: Teste seu conhecimento</h4>
+          {/* MECANISMO DE FIXAÇÃO: Exercícios Simples */}
+          <div className="mt-6 space-y-4">
+            <div className="p-5 rounded-lg bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30">
+              <div className="flex items-center gap-2 mb-4">
+                <Target className="w-5 h-5 text-indigo-400" />
+                <h4 className="text-lg font-bold text-white">Fixação: Teste seu conhecimento</h4>
+              </div>
+              
+              <div className="space-y-4">
+                <SimpleFixationExercise
+                  question="Quantos semitons (meios tons) há em uma oitava?"
+                  options={[
+                    "10 semitons",
+                    "12 semitons",
+                    "14 semitons",
+                    "7 semitons"
+                  ]}
+                  correctAnswer={1}
+                  explanation="Uma oitava tem exatamente 12 semitons. Isso significa que a cada 12 trastes, a mesma nota se repete (mais aguda ou mais grave)."
+                />
+                
+                <SimpleFixationExercise
+                  question="Qual é a sequência das cordas abertas do violão (da mais grave para mais aguda)?"
+                  options={[
+                    "E-A-D-G-B-E",
+                    "A-D-G-B-E-A",
+                    "E-B-G-D-A-E",
+                    "C-D-E-F-G-A"
+                  ]}
+                  correctAnswer={0}
+                  explanation="As cordas abertas do violão são E-A-D-G-B-E (da mais grave para mais aguda). Memorize essa sequência - é fundamental para encontrar notas no braço!"
+                />
+                
+                <SimpleFixationExercise
+                  question="Cada traste no violão aumenta a nota em quanto?"
+                  options={[
+                    "1 tom (2 semitons)",
+                    "1 semitom (meio tom)",
+                    "2 tons",
+                    "Não aumenta, apenas muda a corda"
+                  ]}
+                  correctAnswer={1}
+                  explanation="Cada traste aumenta a nota em exatamente 1 semitom (meio tom). É como subir um degrau na escada musical!"
+                />
+              </div>
             </div>
-            <SimpleFixationExercise
-              question="Quantos semitons (meios tons) há em uma oitava?"
-              options={[
-                "10 semitons",
-                "12 semitons",
-                "14 semitons",
-                "7 semitons"
-              ]}
-              correctAnswer={1}
-              explanation="Uma oitava tem exatamente 12 semitons. Isso significa que a cada 12 trastes, a mesma nota se repete (mais aguda ou mais grave)."
-            />
           </div>
 
           {/* CONCEITOS-CHAVE */}
@@ -1178,7 +1237,7 @@ const THEORY_MODULES: TheoryModule[] = [
                 <strong className="text-[#10b981]">Isso serve para você conseguir:</strong> Tocar acordes maiores (C, G, F, D, etc.) 
                 e entender por que eles têm som "alegre" ou "brilhante".
               </p>
-              <div className="p-3 rounded bg-[#10b981]/10">
+              <div className="p-3 rounded bg-[#10b981]/10 mb-3">
                 <p className="text-sm text-gray-300 mb-2">
                   <span className="font-semibold">Exemplo (Acorde de Dó - C):</span>
                 </p>
@@ -1189,8 +1248,22 @@ const THEORY_MODULES: TheoryModule[] = [
                   <span className="text-gray-400">+</span>
                   <span className="px-3 py-1 rounded bg-[#10b981]/30 text-white font-bold">G</span>
                 </div>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-400 mb-2">
                   (C = nota base, E = 4 semitons acima, G = 3 semitons acima de E)
+                </p>
+                <AudioPlayChordButton chordNotes={["C4", "E4", "G4"]} duration={0.5} label="🎵 Ouvir Acorde Maior (C)" />
+              </div>
+              
+              {/* AÇÃO PRÁTICA IMEDIATA - Acorde Maior */}
+              <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                <p className="text-xs font-semibold text-green-400 mb-2">🎸 Agora toque:</p>
+                <p className="text-xs text-gray-300 mb-2">
+                  <strong>1. Ouça</strong> o acorde C acima - perceba o som alegre e brilhante! 
+                  <strong> 2. Identifique</strong> as 3 notas: C-E-G. 
+                  <strong> 3. Toque</strong> no violão: corda 5, 3º traste (C) + corda 4, 2º traste (E) + corda 3 aberta (G).
+                </p>
+                <p className="text-xs text-gray-400">
+                  <strong>Dica:</strong> Use o construtor de acordes acima para ver a posição completa no braço!
                 </p>
               </div>
             </div>
@@ -1204,7 +1277,7 @@ const THEORY_MODULES: TheoryModule[] = [
                 <strong className="text-[#3b82f6]">Isso serve para você conseguir:</strong> Tocar acordes menores (Am, Dm, Em, etc.) 
                 e entender por que eles têm som "triste" ou "melancólico".
               </p>
-              <div className="p-3 rounded bg-[#3b82f6]/10">
+              <div className="p-3 rounded bg-[#3b82f6]/10 mb-3">
                 <p className="text-sm text-gray-300 mb-2">
                   <span className="font-semibold">Exemplo (Acorde de Lá menor - Am):</span>
                 </p>
@@ -1215,8 +1288,22 @@ const THEORY_MODULES: TheoryModule[] = [
                   <span className="text-gray-400">+</span>
                   <span className="px-3 py-1 rounded bg-[#3b82f6]/30 text-white font-bold">E</span>
                 </div>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-400 mb-2">
                   (A = nota base, C = 3 semitons acima, E = 4 semitons acima de C)
+                </p>
+                <AudioPlayChordButton chordNotes={["A3", "C4", "E4"]} duration={0.5} label="🎵 Ouvir Acorde Menor (Am)" />
+              </div>
+              
+              {/* AÇÃO PRÁTICA IMEDIATA - Acorde Menor */}
+              <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                <p className="text-xs font-semibold text-green-400 mb-2">🎸 Agora toque:</p>
+                <p className="text-xs text-gray-300 mb-2">
+                  <strong>1. Ouça</strong> o acorde Am acima e <strong>compare</strong> com C - perceba a diferença de "clima"! 
+                  <strong> 2. Identifique</strong> o som triste/melancólico. 
+                  <strong> 3. Toque</strong> no violão: corda 5 aberta (A) + corda 4, 2º traste (C) + corda 3, 2º traste (E).
+                </p>
+                <p className="text-xs text-gray-400">
+                  <strong>Dica:</strong> A diferença entre C (alegre) e Am (triste) é só uma nota - a terça! Por isso é importante entender intervalos.
                 </p>
               </div>
             </div>
@@ -1271,23 +1358,52 @@ const THEORY_MODULES: TheoryModule[] = [
             )}
           </div>
 
-          {/* MECANISMO DE FIXAÇÃO: Exercício Simples */}
-          <div className="mt-6 p-5 rounded-lg bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30">
-            <div className="flex items-center gap-2 mb-4">
-              <Target className="w-5 h-5 text-indigo-400" />
-              <h4 className="text-lg font-bold text-white">Fixação: Teste seu conhecimento</h4>
+          {/* MECANISMO DE FIXAÇÃO: Exercícios Simples */}
+          <div className="mt-6 space-y-4">
+            <div className="p-5 rounded-lg bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30">
+              <div className="flex items-center gap-2 mb-4">
+                <Target className="w-5 h-5 text-indigo-400" />
+                <h4 className="text-lg font-bold text-white">Fixação: Teste seu conhecimento</h4>
+              </div>
+              
+              <div className="space-y-4">
+                <SimpleFixationExercise
+                  question="Qual é a diferença entre um acorde Maior e um acorde Menor?"
+                  options={[
+                    "O número de notas (maior tem mais notas)",
+                    "A segunda nota: maior = 4 semitons, menor = 3 semitons",
+                    "A posição no braço do violão",
+                    "Não há diferença, são a mesma coisa"
+                  ]}
+                  correctAnswer={1}
+                  explanation="A única diferença é a terça (segunda nota): Maior tem terça maior (4 semitons = som alegre), Menor tem terça menor (3 semitons = som triste)."
+                />
+                
+                <SimpleFixationExercise
+                  question="Quantas notas formam uma tríade (acorde básico)?"
+                  options={[
+                    "2 notas",
+                    "3 notas",
+                    "4 notas",
+                    "5 notas"
+                  ]}
+                  correctAnswer={1}
+                  explanation="Uma tríade tem exatamente 3 notas: fundamental, terça (maior ou menor) e quinta justa. Exemplo: C (C-E-G) ou Am (A-C-E)."
+                />
+                
+                <SimpleFixationExercise
+                  question="Por que acordes maiores soam 'alegres' e menores soam 'tristes'?"
+                  options={[
+                    "Porque têm notas diferentes",
+                    "Porque a terça maior (4 semitons) cria som brilhante, e a terça menor (3 semitons) cria som melancólico",
+                    "Porque são tocados em posições diferentes",
+                    "Não há diferença de som"
+                  ]}
+                  correctAnswer={1}
+                  explanation="A diferença de apenas 1 semitom na terça (3ª maior vs 3ª menor) muda completamente o 'clima' do acorde. Maior = alegre/brilhante, Menor = triste/melancólico!"
+                />
+              </div>
             </div>
-            <SimpleFixationExercise
-              question="Qual é a diferença entre um acorde Maior e um acorde Menor?"
-              options={[
-                "O número de notas (maior tem mais notas)",
-                "A segunda nota: maior = 4 semitons, menor = 3 semitons",
-                "A posição no braço do violão",
-                "Não há diferença, são a mesma coisa"
-              ]}
-              correctAnswer={1}
-              explanation="A única diferença é a terça (segunda nota): Maior tem terça maior (4 semitons = som alegre), Menor tem terça menor (3 semitons = som triste)."
-            />
           </div>
 
           {/* CONCEITOS-CHAVE */}
@@ -1600,23 +1716,52 @@ const THEORY_MODULES: TheoryModule[] = [
             </div>
           </div>
 
-          {/* MECANISMO DE FIXAÇÃO: Exercício Simples */}
-          <div className="mt-6 p-5 rounded-lg bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30">
-            <div className="flex items-center gap-2 mb-4">
-              <Target className="w-5 h-5 text-indigo-400" />
-              <h4 className="text-lg font-bold text-white">Fixação: Teste seu conhecimento</h4>
+          {/* MECANISMO DE FIXAÇÃO: Exercícios Simples */}
+          <div className="mt-6 space-y-4">
+            <div className="p-5 rounded-lg bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30">
+              <div className="flex items-center gap-2 mb-4">
+                <Target className="w-5 h-5 text-indigo-400" />
+                <h4 className="text-lg font-bold text-white">Fixação: Teste seu conhecimento</h4>
+              </div>
+              
+              <div className="space-y-4">
+                <SimpleFixationExercise
+                  question="Qual é a principal diferença entre ritmo Straight e Swing?"
+                  options={[
+                    "Straight é mais rápido que Swing",
+                    "Straight é matemático/regular, Swing tem balanço natural",
+                    "Swing usa mais instrumentos",
+                    "Não há diferença"
+                  ]}
+                  correctAnswer={1}
+                  explanation="Straight é perfeitamente regular (como um relógio), enquanto Swing tem um balanço natural com leve atraso que cria o 'swing'. Ambos são importantes em diferentes estilos musicais."
+                />
+                
+                <SimpleFixationExercise
+                  question="Qual estilo musical geralmente usa ritmo Straight?"
+                  options={[
+                    "Jazz e Blues",
+                    "Rock, Pop e Samba",
+                    "Apenas música clássica",
+                    "Todos os estilos usam Swing"
+                  ]}
+                  correctAnswer={1}
+                  explanation="Rock, Pop e Samba geralmente usam ritmo Straight (matemático e regular). Jazz e Blues usam mais o Swing (balançado)."
+                />
+                
+                <SimpleFixationExercise
+                  question="Por que é importante identificar o tipo de ritmo (Straight vs Swing) em uma música?"
+                  options={[
+                    "Para tocar mais rápido",
+                    "Para tocar no 'feeling' certo da música",
+                    "Para usar mais acordes",
+                    "Não é importante"
+                  ]}
+                  correctAnswer={1}
+                  explanation="Identificar o tipo de ritmo é essencial para tocar no 'feeling' certo. Tocar Straight em uma música Swing (ou vice-versa) soa errado, mesmo que as notas estejam corretas!"
+                />
+              </div>
             </div>
-            <SimpleFixationExercise
-              question="Qual é a principal diferença entre ritmo Straight e Swing?"
-              options={[
-                "Straight é mais rápido que Swing",
-                "Straight é matemático/regular, Swing tem balanço natural",
-                "Swing usa mais instrumentos",
-                "Não há diferença"
-              ]}
-              correctAnswer={1}
-              explanation="Straight é perfeitamente regular (como um relógio), enquanto Swing tem um balanço natural com leve atraso que cria o 'swing'. Ambos são importantes em diferentes estilos musicais."
-            />
           </div>
 
           {/* CONCEITOS-CHAVE */}
@@ -1788,7 +1933,7 @@ const THEORY_MODULES: TheoryModule[] = [
                 <strong className="text-white"> Isso serve para você conseguir:</strong> Tocar solos em músicas alegres, 
                 improvisar sobre acordes maiores e entender a base da maioria das músicas populares.
               </p>
-              <div className="p-3 rounded bg-[#06b6d4]/10">
+              <div className="p-3 rounded bg-[#06b6d4]/10 mb-3">
                 <p className="text-sm text-gray-300 mb-2">
                   <span className="font-semibold">Padrão:</span> Tom - Tom - Semitom - Tom - Tom - Tom - Semitom
                   <span className="text-gray-400 text-xs ml-2">(Tom = 2 semitons, Semitom = 1 semitom)</span>
@@ -1796,7 +1941,19 @@ const THEORY_MODULES: TheoryModule[] = [
                 <p className="text-sm text-gray-300 mb-3">
                   <span className="font-semibold">Exemplo (Dó Maior):</span> C - D - E - F - G - A - B - C
                 </p>
-                <AudioPlayChordButton chordNotes={["C4", "D4", "E4", "F4", "G4", "A4", "B4", "C5"]} duration={0.3} sequential label="Ouvir Exemplo" />
+                <AudioPlayChordButton chordNotes={["C4", "D4", "E4", "F4", "G4", "A4", "B4", "C5"]} duration={0.3} sequential label="🎵 Ouvir Escala Maior" />
+              </div>
+              
+              {/* AÇÃO PRÁTICA IMEDIATA - Escala Maior */}
+              <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                <p className="text-xs font-semibold text-green-400 mb-2">🎸 Agora toque:</p>
+                <p className="text-xs text-gray-300 mb-2">
+                  <strong>1. Ouça</strong> a escala acima clicando no botão. <strong>2. Identifique</strong> o som alegre e brilhante. 
+                  <strong> 3. Toque</strong> no violão: corda 5 (A), 3º traste (C) → 5º traste (D) → 7º traste (E) → corda 4 aberta (F).
+                </p>
+                <p className="text-xs text-gray-400">
+                  <strong>Por quê?</strong> Ouvir antes de tocar ajuda seu cérebro a entender o som que você quer criar!
+                </p>
               </div>
             </div>
 
@@ -1807,14 +1964,26 @@ const THEORY_MODULES: TheoryModule[] = [
                 <strong className="text-white"> Isso serve para você conseguir:</strong> Tocar solos em músicas tristes, 
                 improvisar sobre acordes menores e criar melodias mais emocionais.
               </p>
-              <div className="p-3 rounded bg-[#8b5cf6]/10">
+              <div className="p-3 rounded bg-[#8b5cf6]/10 mb-3">
                 <p className="text-sm text-gray-300 mb-2">
                   <span className="font-semibold">Padrão:</span> Tom - Semitom - Tom - Tom - Semitom - Tom - Tom
                 </p>
                 <p className="text-sm text-gray-300 mb-3">
                   <span className="font-semibold">Exemplo (Lá Menor):</span> A - B - C - D - E - F - G - A
                 </p>
-                <AudioPlayChordButton chordNotes={["A3", "B3", "C4", "D4", "E4", "F4", "G4", "A4"]} duration={0.3} sequential label="Ouvir Exemplo" />
+                <AudioPlayChordButton chordNotes={["A3", "B3", "C4", "D4", "E4", "F4", "G4", "A4"]} duration={0.3} sequential label="🎵 Ouvir Escala Menor" />
+              </div>
+              
+              {/* AÇÃO PRÁTICA IMEDIATA - Escala Menor */}
+              <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                <p className="text-xs font-semibold text-green-400 mb-2">🎸 Agora toque:</p>
+                <p className="text-xs text-gray-300 mb-2">
+                  <strong>1. Ouça</strong> a escala acima e <strong>compare</strong> com a escala maior - perceba a diferença de "clima". 
+                  <strong> 2. Identifique</strong> o som melancólico. <strong>3. Toque</strong> no violão: corda 5 aberta (A) → 2º traste (B) → 3º traste (C).
+                </p>
+                <p className="text-xs text-gray-400">
+                  <strong>Dica:</strong> A diferença de apenas algumas notas muda completamente o "clima" - maior = alegre, menor = triste!
+                </p>
               </div>
             </div>
 
@@ -1825,12 +1994,25 @@ const THEORY_MODULES: TheoryModule[] = [
                 <strong className="text-white"> Isso serve para você conseguir:</strong> Começar a improvisar sem errar muito, 
                 tocar solos de blues e rock, e entender escalas de forma mais simples.
               </p>
-              <div className="p-3 rounded bg-[#10b981]/10">
+              <div className="p-3 rounded bg-[#10b981]/10 mb-3">
                 <p className="text-sm text-gray-300 mb-3">
                   <span className="font-semibold">Exemplo (Pentatônica Menor de Lá):</span> A - C - D - E - G
                   <span className="text-gray-400 text-xs ml-2">(Menos notas = mais difícil errar!)</span>
                 </p>
-                <AudioPlayChordButton chordNotes={["A3", "C4", "D4", "E4", "G4"]} duration={0.3} sequential label="Ouvir Exemplo" />
+                <AudioPlayChordButton chordNotes={["A3", "C4", "D4", "E4", "G4"]} duration={0.3} sequential label="🎵 Ouvir Pentatônica" />
+              </div>
+              
+              {/* AÇÃO PRÁTICA IMEDIATA - Pentatônica */}
+              <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                <p className="text-xs font-semibold text-green-400 mb-2">🎸 Agora toque:</p>
+                <p className="text-xs text-gray-300 mb-2">
+                  <strong>1. Ouça</strong> a pentatônica acima - perceba como soa bem mesmo sendo simples! 
+                  <strong> 2. Identifique</strong> que tem apenas 5 notas (mais fácil!). 
+                  <strong> 3. Toque</strong> no violão: corda 5 aberta (A) → 3º traste (C) → 5º traste (D) → 7º traste (E) → corda 4, 2º traste (G).
+                </p>
+                <p className="text-xs text-gray-400">
+                  <strong>Por quê?</strong> Com apenas 5 notas, é muito mais difícil errar. Perfeita para começar a improvisar!
+                </p>
               </div>
             </div>
           </div>
@@ -1875,23 +2057,52 @@ const THEORY_MODULES: TheoryModule[] = [
             </div>
           </div>
 
-          {/* MECANISMO DE FIXAÇÃO: Exercício Simples */}
-          <div className="mt-6 p-5 rounded-lg bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30">
-            <div className="flex items-center gap-2 mb-4">
-              <Target className="w-5 h-5 text-indigo-400" />
-              <h4 className="text-lg font-bold text-white">Fixação: Teste seu conhecimento</h4>
+          {/* MECANISMO DE FIXAÇÃO: Exercícios Simples */}
+          <div className="mt-6 space-y-4">
+            <div className="p-5 rounded-lg bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30">
+              <div className="flex items-center gap-2 mb-4">
+                <Target className="w-5 h-5 text-indigo-400" />
+                <h4 className="text-lg font-bold text-white">Fixação: Teste seu conhecimento</h4>
+              </div>
+              
+              <div className="space-y-4">
+                <SimpleFixationExercise
+                  question="Quantas notas tem a Escala Pentatônica?"
+                  options={[
+                    "7 notas (como a escala maior)",
+                    "5 notas",
+                    "12 notas (todas as notas)",
+                    "3 notas"
+                  ]}
+                  correctAnswer={1}
+                  explanation="A Pentatônica tem apenas 5 notas, por isso é mais fácil de usar e menos provável de errar. É perfeita para começar a improvisar!"
+                />
+                
+                <SimpleFixationExercise
+                  question="Qual é o padrão da Escala Maior?"
+                  options={[
+                    "Tom-Tom-Semitom-Tom-Tom-Tom-Semitom",
+                    "Tom-Semitom-Tom-Tom-Semitom-Tom-Tom",
+                    "Semitom-Tom-Tom-Semitom-Tom-Tom-Tom",
+                    "Tom-Tom-Tom-Semitom-Tom-Tom-Semitom"
+                  ]}
+                  correctAnswer={0}
+                  explanation="O padrão da Escala Maior é: Tom-Tom-Semitom-Tom-Tom-Tom-Semitom. Isso cria o som alegre e brilhante característico das escalas maiores!"
+                />
+                
+                <SimpleFixationExercise
+                  question="Por que a Pentatônica é mais fácil para iniciantes?"
+                  options={[
+                    "Tem mais notas que outras escalas",
+                    "Tem apenas 5 notas - menos chance de errar",
+                    "É mais rápida de tocar",
+                    "Não precisa de dedilhado"
+                  ]}
+                  correctAnswer={1}
+                  explanation="A Pentatônica tem apenas 5 notas (em vez de 7), então há menos chance de tocar uma nota errada. Por isso é perfeita para começar a improvisar!"
+                />
+              </div>
             </div>
-            <SimpleFixationExercise
-              question="Quantas notas tem a Escala Pentatônica?"
-              options={[
-                "7 notas (como a escala maior)",
-                "5 notas",
-                "12 notas (todas as notas)",
-                "3 notas"
-              ]}
-              correctAnswer={1}
-              explanation="A Pentatônica tem apenas 5 notas, por isso é mais fácil de usar e menos provável de errar. É perfeita para começar a improvisar!"
-            />
           </div>
 
           {/* CONCEITOS-CHAVE */}
@@ -2072,7 +2283,13 @@ const THEORY_MODULES: TheoryModule[] = [
                     <strong>Som:</strong> Tenso, como no tema de "Tubarão" (dó-dó#). 
                     <strong className="text-white"> Serve para:</strong> Criar suspense e tensão na música.
                   </p>
-                  <AudioPlayChordButton chordNotes={["C4", "C#4"]} duration={0.5} label="Ouvir Exemplo" />
+                  <AudioPlayChordButton chordNotes={["C4", "C#4"]} duration={0.5} label="🎵 Ouvir 2ª Menor" />
+                  <div className="mt-2 p-2 rounded bg-green-500/10 border border-green-500/20">
+                    <p className="text-xs text-gray-300">
+                      <strong className="text-green-400">🎸 Toque:</strong> Corda 5, 3º traste (C) → 4º traste (C#). 
+                      <strong> Identifique</strong> a tensão - soa como suspense!
+                    </p>
+                  </div>
                 </div>
                 
                 <div className="p-3 rounded bg-white/5">
@@ -2084,7 +2301,13 @@ const THEORY_MODULES: TheoryModule[] = [
                     <strong>Som:</strong> Alegre e brilhante. 
                     <strong className="text-white"> Serve para:</strong> Formar acordes maiores (C, G, F, etc.) e criar sensação de felicidade.
                   </p>
-                  <AudioPlayChordButton chordNotes={["C4", "E4"]} duration={0.5} label="Ouvir Exemplo" />
+                  <AudioPlayChordButton chordNotes={["C4", "E4"]} duration={0.5} label="🎵 Ouvir 3ª Maior" />
+                  <div className="mt-2 p-2 rounded bg-green-500/10 border border-green-500/20">
+                    <p className="text-xs text-gray-300">
+                      <strong className="text-green-400">🎸 Toque:</strong> Corda 5, 3º traste (C) → Corda 4, 2º traste (E). 
+                      <strong> Identifique</strong> o som alegre - é a base dos acordes maiores!
+                    </p>
+                  </div>
                 </div>
                 
                 <div className="p-3 rounded bg-white/5">
@@ -2096,7 +2319,13 @@ const THEORY_MODULES: TheoryModule[] = [
                     <strong>Som:</strong> Estável e poderoso. 
                     <strong className="text-white"> Serve para:</strong> Criar power chords (muito usados no rock) e dar força aos acordes.
                   </p>
-                  <AudioPlayChordButton chordNotes={["C4", "G4"]} duration={0.5} label="Ouvir Exemplo" />
+                  <AudioPlayChordButton chordNotes={["C4", "G4"]} duration={0.5} label="🎵 Ouvir 5ª Justa" />
+                  <div className="mt-2 p-2 rounded bg-green-500/10 border border-green-500/20">
+                    <p className="text-xs text-gray-300">
+                      <strong className="text-green-400">🎸 Toque:</strong> Corda 5, 3º traste (C) → Corda 3 aberta (G). 
+                      <strong> Identifique</strong> o som poderoso - é o power chord do rock!
+                    </p>
+                  </div>
                 </div>
                 
                 <div className="p-3 rounded bg-white/5">
@@ -2108,7 +2337,13 @@ const THEORY_MODULES: TheoryModule[] = [
                     <strong>Som:</strong> Mesma nota, só que mais aguda ou grave. 
                     <strong className="text-white"> Serve para:</strong> Encontrar a mesma nota em outro lugar do braço e criar som mais cheio.
                   </p>
-                  <AudioPlayChordButton chordNotes={["C4", "C5"]} duration={0.5} label="Ouvir Exemplo" />
+                  <AudioPlayChordButton chordNotes={["C4", "C5"]} duration={0.5} label="🎵 Ouvir Oitava" />
+                  <div className="mt-2 p-2 rounded bg-green-500/10 border border-green-500/20">
+                    <p className="text-xs text-gray-300">
+                      <strong className="text-green-400">🎸 Toque:</strong> Corda 5, 3º traste (C) → Corda 2, 1º traste (C). 
+                      <strong> Identifique</strong> que é a mesma nota, só mais aguda - isso ajuda a encontrar notas em vários lugares!
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2522,23 +2757,52 @@ const THEORY_MODULES: TheoryModule[] = [
             </div>
           </div>
 
-          {/* MECANISMO DE FIXAÇÃO: Exercício Simples */}
-          <div className="mt-6 p-5 rounded-lg bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30">
-            <div className="flex items-center gap-2 mb-4">
-              <Target className="w-5 h-5 text-indigo-400" />
-              <h4 className="text-lg font-bold text-white">Fixação: Teste seu conhecimento</h4>
+          {/* MECANISMO DE FIXAÇÃO: Exercícios Simples */}
+          <div className="mt-6 space-y-4">
+            <div className="p-5 rounded-lg bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30">
+              <div className="flex items-center gap-2 mb-4">
+                <Target className="w-5 h-5 text-indigo-400" />
+                <h4 className="text-lg font-bold text-white">Fixação: Teste seu conhecimento</h4>
+              </div>
+              
+              <div className="space-y-4">
+                <SimpleFixationExercise
+                  question="Qual é a função do acorde V (dominante) em uma progressão?"
+                  options={[
+                    "Criar sensação de repouso",
+                    "Criar tensão que quer resolver para a tônica",
+                    "Preparar para afastar da tônica",
+                    "Não tem função específica"
+                  ]}
+                  correctAnswer={1}
+                  explanation="O acorde V (dominante) cria tensão que naturalmente quer resolver para a tônica (I). É como uma pergunta que precisa de resposta - por isso progressões V-I são tão fortes!"
+                />
+                
+                <SimpleFixationExercise
+                  question="Qual progressão é conhecida como 'a progressão mais famosa do pop'?"
+                  options={[
+                    "I-IV-V (C-F-G)",
+                    "I-V-vi-IV (C-G-Am-F)",
+                    "ii-V-I (Dm-G-C)",
+                    "I-vi-IV-V (C-Am-F-G)"
+                  ]}
+                  correctAnswer={1}
+                  explanation="A progressão I-V-vi-IV (C-G-Am-F) é usada em centenas de músicas pop famosas como 'Let It Be', 'No Woman No Cry' e muitas outras!"
+                />
+                
+                <SimpleFixationExercise
+                  question="Qual acorde cria sensação de 'casa' ou repouso em uma progressão?"
+                  options={[
+                    "O acorde V (dominante)",
+                    "O acorde I (tônica)",
+                    "O acorde IV (subdominante)",
+                    "O acorde vi (relativa menor)"
+                  ]}
+                  correctAnswer={1}
+                  explanation="O acorde I (tônica) cria sensação de 'casa' - é para onde a música quer voltar. É o ponto de repouso e estabilidade na progressão!"
+                />
+              </div>
             </div>
-            <SimpleFixationExercise
-              question="Qual é a função do acorde V (dominante) em uma progressão?"
-              options={[
-                "Criar sensação de repouso",
-                "Criar tensão que quer resolver para a tônica",
-                "Preparar para afastar da tônica",
-                "Não tem função específica"
-              ]}
-              correctAnswer={1}
-              explanation="O acorde V (dominante) cria tensão que naturalmente quer resolver para a tônica (I). É como uma pergunta que precisa de resposta - por isso progressões V-I são tão fortes!"
-            />
           </div>
 
           {/* CONCEITOS-CHAVE */}
@@ -2912,6 +3176,18 @@ const THEORY_MODULES: TheoryModule[] = [
 export default function Theory() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [selectedModule, setSelectedModule] = useState<TheoryModule | null>(null);
+
+  // Parar todo áudio quando navegar entre módulos
+  useEffect(() => {
+    if (selectedModule !== null) {
+      // Parar áudio ao mudar de módulo
+      try {
+        unifiedAudioService.stopAll();
+      } catch (error) {
+        console.error('Erro ao parar áudio na navegação:', error);
+      }
+    }
+  }, [selectedModule]);
   const [showQuiz, setShowQuiz] = useState(false);
   const { xp, level, xpToNextLevel, currentStreak } = useGamificationStore();
   const { user } = useUserStore();

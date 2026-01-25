@@ -133,6 +133,11 @@ export function HandsOnOnboarding({
   }, [state.currentStep]);
 
   const completeStep = () => {
+    // Feedback sonoro de avanço de etapa
+    import('@/services/ActionFeedbackService').then(({ actionFeedbackService }) => {
+      actionFeedbackService.playActionFeedback('step_progress');
+    });
+    
     setState(prev => {
       const newSteps = [...prev.steps];
       newSteps[prev.currentStep].completed = true;

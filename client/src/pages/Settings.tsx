@@ -757,7 +757,17 @@ export default function Settings() {
                 </div>
                 <Slider
                   value={[masterVolume * 100]}
-                  onValueChange={(value) => setMasterVolume(value[0] / 100)}
+                  onValueChange={(value) => {
+                    const newVolume = value[0] / 100;
+                    setMasterVolume(newVolume);
+                    // Sincronizar com AudioMixer imediatamente
+                    import('@/audio').then(({ getAudioMixer }) => {
+                      const mixer = getAudioMixer();
+                      if (mixer) {
+                        mixer.setMasterVolume(newVolume);
+                      }
+                    }).catch(() => {});
+                  }}
                   max={100}
                   step={1}
                 />

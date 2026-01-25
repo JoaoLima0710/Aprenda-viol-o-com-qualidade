@@ -15,6 +15,7 @@ import {
   handleAudioError,
   checkBrowserSupport,
 } from '@/errors/AudioErrors';
+import { audioResilienceService } from './AudioResilienceService';
 import { toast } from 'sonner';
 
 /**
@@ -34,6 +35,9 @@ class AudioManager {
   private audioContextState: AudioContextState = 'suspended';
   private lastAudioTime = 0;
   private mobileOptimizations = false;
+  private hasUserInteracted = false; // Flag para rastrear interação explícita do usuário
+  private hasPlayedActivationRitual = false; // Flag para garantir que o ritual toca apenas uma vez por sessão
+  private hasPlayedActivationRitual = false; // Flag para garantir que o ritual toca apenas uma vez por sessão
 
   constructor() {
     // Detect mobile device for optimizations
@@ -57,28 +61,19 @@ class AudioManager {
       // Listen to visibility changes (important for mobile PWA)
       document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
-          console.log('📱 App hidden, pausing audio context');
+          console.log('📱 App hidden, pausing audio');
+          this.handleAppBackground();
           this.handleVisibilityChange(true);
         } else {
-          console.log('📱 App visible, resuming audio context');
-          this.handleVisibilityChange(false);
+          console.log('📱 App visible, mas áudio permanece pausado até interação');
+          // NÃO retomar automaticamente - apenas quando houver interação
+          this.handleAppForeground();
         }
       });
 
       // Handle page unload (prevent audio issues)
       window.addEventListener('beforeunload', () => {
         this.emergencyCleanup();
-      });
-
-      // Mobile: Handle app going to background/foreground
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-          // App going to background
-          this.handleAppBackground();
-        } else {
-          // App coming to foreground
-          this.handleAppForeground();
-        }
       });
     }
   }
@@ -96,12 +91,13 @@ class AudioManager {
 
   /**
    * Handle app coming to foreground (mobile optimization)
+   * NÃO retoma automaticamente - apenas quando houver interação do usuário
    */
   private async handleAppForeground(): Promise<void> {
     if (this.mobileOptimizations) {
-      console.log('📱 App coming to foreground, resuming audio');
-      await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
-      await this.ensureAudioContext();
+      console.log('📱 App coming to foreground, mas áudio permanece pausado até interação do usuário');
+      // NÃO chamar ensureAudioContext() aqui - apenas quando houver interação explícita
+      // O AudioContext será retomado quando o usuário clicar em algo que precise de áudio
     }
   }
 
@@ -178,23 +174,33 @@ class AudioManager {
 
     try {
       if (hidden) {
-        // App going to background - suspend audio context
+        // App going to background - parar todo áudio e suspender contexto
+        this.stopAll();
         if (this.currentEngine === 'samples' && this.activeService.audioContext) {
-          await this.activeService.audioContext.suspend();
-          this.audioContextState = 'suspended';
+          try {
+            await this.activeService.audioContext.suspend();
+            this.audioContextState = 'suspended';
+          } catch (error) {
+            console.warn('⚠️ Erro ao suspender AudioContext:', error);
+          }
         }
       } else {
-        // App coming to foreground - resume audio context
-        if (this.currentEngine === 'samples' && this.activeService.audioContext) {
-          await this.activeService.audioContext.resume();
-          this.audioContextState = 'running';
+        // App coming to foreground - NÃO retomar automaticamente
+        // O AudioContext permanecerá suspenso até interação do usuário
+        // Não chamar resume() aqui - apenas quando houver interação explícita
+        console.log('📱 App visível, mas AudioContext permanece suspenso até interação do usuário');
+        
+        // Re-ensure initialization state after visibility change
+        // This handles cases where the service might have been reset
+        if (!this.isInitialized && this.activeService) {
+          // Service exists but flag is false - reset flag
+          this.isInitialized = true;
         }
-
-        // Ensure audio is still working after resume
-        await this.ensureAudioContext();
       }
     } catch (error) {
       console.warn('⚠️ Error handling visibility change:', error);
+      // On error, mark as not initialized to force re-initialization on next use
+      this.isInitialized = false;
     }
   }
 
@@ -229,11 +235,89 @@ class AudioManager {
   }
 
   /**
+   * Mark that user has explicitly interacted (required for Chrome autoplay policy)
+   * This must be called before any audio playback can occur
+   */
+  markUserInteraction(): void {
+    if (!this.hasUserInteracted) {
+      this.hasUserInteracted = true;
+      console.log('✅ User interaction detected - audio unlock allowed');
+      
+      // Tocar ritual sonoro de ativação após interação do usuário
+      // Aguardar um pequeno delay para garantir que o sistema está pronto
+      setTimeout(() => {
+        this.playActivationRitual();
+      }, 150);
+    }
+  }
+
+  /**
+   * Check if user has explicitly interacted
+   */
+  hasUserInteractedWithAudio(): boolean {
+    return this.hasUserInteracted;
+  }
+
+  /**
    * Ensure audio service is initialized before use
+   * Thread-safe: handles concurrent calls gracefully
+   * Prevents race conditions during component mount/unmount
+   * 
+   * NOTE: This method can be called in response to user interaction,
+   * but will only resume AudioContext if hasUserInteracted is true.
    */
   async ensureInitialized(): Promise<void> {
-    if (!this.isInitialized) {
-      await this.initialize();
+    // If already initialized, try to resume AudioContext if suspended
+    // BUT ONLY if user has explicitly interacted
+    if (this.isInitialized) {
+      if (this.hasUserInteracted) {
+        await this.ensureAudioContext();
+        
+        // Tocar ritual sonoro se ainda não tocou
+        if (!this.hasPlayedActivationRitual) {
+          setTimeout(() => {
+            this.playActivationRitual();
+          }, 150);
+        }
+      } else {
+        console.warn('⚠️ AudioContext suspended - user interaction required before resume');
+      }
+      return;
+    }
+
+    // If initialization is in progress, wait for it
+    if (this.initializationPromise) {
+      await this.initializationPromise;
+      // After initialization, ensure AudioContext is resumed ONLY if user interacted
+      if (this.hasUserInteracted) {
+        await this.ensureAudioContext();
+        
+        // Tocar ritual sonoro após inicialização se ainda não tocou
+        if (!this.hasPlayedActivationRitual) {
+          setTimeout(() => {
+            this.playActivationRitual();
+          }, 150);
+        }
+      } else {
+        console.warn('⚠️ AudioContext suspended - user interaction required before resume');
+      }
+      return;
+    }
+
+    // Start initialization
+    await this.initialize();
+    // After initialization, ensure AudioContext is resumed ONLY if user interacted
+    if (this.hasUserInteracted) {
+      await this.ensureAudioContext();
+      
+      // Tocar ritual sonoro após inicialização se ainda não tocou
+      if (!this.hasPlayedActivationRitual) {
+        setTimeout(() => {
+          this.playActivationRitual();
+        }, 150);
+      }
+    } else {
+      console.warn('⚠️ AudioContext suspended - user interaction required before resume');
     }
   }
 
@@ -328,9 +412,16 @@ class AudioManager {
 
   /**
    * Ensure audio context is running (crucial for mobile and tablets)
+   * CRITICAL: Only resumes if user has explicitly interacted
    */
   private async ensureAudioContext(): Promise<void> {
     if (!this.activeService) return;
+
+    // CRITICAL: Do not resume AudioContext without explicit user interaction
+    if (!this.hasUserInteracted) {
+      console.warn('🚫 AudioContext resume blocked - user interaction required');
+      return;
+    }
 
     try {
       // Check for AudioContext in different service types
@@ -346,7 +437,9 @@ class AudioManager {
 
       if (audioContext) {
         if (audioContext.state === 'suspended') {
-          console.log(`📱 ${this.isTablet ? 'Tablet' : 'Mobile'}: Resuming suspended AudioContext...`);
+          // NOTE: This resume() is ONLY called after explicit user interaction
+          // hasUserInteracted flag ensures we don't violate autoplay policy
+          console.log(`📱 ${this.isTablet ? 'Tablet' : 'Mobile'}: Resuming suspended AudioContext (user interaction confirmed)...`);
           await audioContext.resume();
           this.audioContextState = 'running';
           console.log('✅ Audio context resumed, state:', audioContext.state);
@@ -359,13 +452,10 @@ class AudioManager {
           this.audioContextState = 'running';
         }
 
-        // Test audio context with a brief tone (helps with mobile/tablet audio issues)
-        if ((this.mobileOptimizations || this.isTablet) && audioContext.state === 'running') {
-          // Skip test for tablets to avoid unnecessary delay
-          if (!this.isTablet) {
-            await this.testAudioContext();
-          }
-        }
+        // NOTE: Removed testAudioContext() call to prevent any audio playback
+        // before explicit user interaction. This ensures Chrome autoplay policy compliance.
+        // Audio will only play after user explicitly clicks "Ativar Áudio"
+        // No silent test tones are played - full compliance with autoplay policy
       }
     } catch (error) {
       console.warn('⚠️ Audio context ensure failed:', error);
@@ -374,18 +464,14 @@ class AudioManager {
 
   /**
    * Test audio context with a very brief inaudible tone (helps mobile)
+   * 
+   * DEPRECATED: This method is no longer used to ensure Chrome autoplay policy compliance.
+   * Audio will only play after explicit user interaction via markUserInteraction().
    */
   private async testAudioContext(): Promise<void> {
-    try {
-      // Create a very brief, inaudible test tone
-      const testNote = 'C4';
-      const testDuration = 0.001; // 1ms - inaudible but tests the context
-
-      await this.playNote(testNote, testDuration);
-      console.log('🔊 Audio context test successful');
-    } catch (error) {
-      console.warn('⚠️ Audio context test failed:', error);
-    }
+    // REMOVED: No longer testing audio context to prevent any playback before user interaction
+    // This ensures full compliance with Chrome autoplay policy
+    console.log('ℹ️ Audio context test skipped (autoplay policy compliance)');
   }
 
   /**
@@ -454,15 +540,8 @@ class AudioManager {
           }
         }
       } catch (error) {
-        const handled = handleAudioError(error);
-        console.error('❌ Error during initialization:', handled.message, error);
-        
-        if (error instanceof AudioError && !error.recoverable) {
-          toast.error('Erro de Inicialização', {
-            description: handled.message,
-          });
-        }
-        
+        // Usar AudioResilienceService para tratar falha
+        await audioResilienceService.handleFailure(error, 'switchEngine', true);
         success = false;
       }
 
@@ -505,8 +584,15 @@ class AudioManager {
     // Ensure service is initialized before setting instrument
     await this.ensureInitialized();
     
+    // Double-check after ensureInitialized (handles edge cases)
     if (!this.activeService) {
-      throw new Error('Audio service not initialized - call initialize() first');
+      // Try one more time if service is still not available
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+      if (!this.activeService) {
+        throw new Error('Audio service not initialized - call initialize() first');
+      }
     }
 
     console.log('🎸 Setting instrument to:', instrument, 'on engine:', this.currentEngine);
@@ -555,11 +641,102 @@ class AudioManager {
   }
 
   /**
+   * Check if audio context requires user interaction (autoplay policy guard)
+   */
+  private checkAutoplayPolicy(): boolean {
+    if (!this.activeService) {
+      console.warn('🚫 Playback blocked: No active audio service');
+      return false;
+    }
+
+    // CRITICAL: Check if user has explicitly interacted
+    if (!this.hasUserInteracted) {
+      console.warn('🚫 Playback blocked: User interaction required (Chrome autoplay policy)');
+      return false;
+    }
+
+    // Check for AudioContext in different service types
+    let audioContext: AudioContext | null = null;
+    
+    if (this.activeService.audioContext) {
+      audioContext = this.activeService.audioContext;
+    } else if (this.currentEngine === 'guitarset' && (this.activeService as any).audioContext) {
+      audioContext = (this.activeService as any).audioContext;
+    } else if (this.currentEngine === 'philharmonia' && (this.activeService as any).audioContext) {
+      audioContext = (this.activeService as any).audioContext;
+    }
+
+    // If AudioContext is suspended, we need user interaction to resume
+    // Don't auto-resume - let the user explicitly interact first
+    if (audioContext && audioContext.state === 'suspended') {
+      console.warn('🚫 Playback blocked: AudioContext is suspended - user interaction required');
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Check if AudioContext is in a valid state for playback
+   * Returns false if AudioContext is not 'running'
+   * CRITICAL: Also checks if user has explicitly interacted
+   */
+  private checkPlaybackState(): boolean {
+    if (!this.activeService) {
+      console.warn('🚫 Playback blocked: No active audio service');
+      return false;
+    }
+
+    // CRITICAL: Check if user has explicitly interacted
+    if (!this.hasUserInteracted) {
+      console.warn('🚫 Playback blocked: User interaction required (Chrome autoplay policy)');
+      return false;
+    }
+
+    // Check for AudioContext in different service types
+    let audioContext: AudioContext | null = null;
+    
+    if (this.activeService.audioContext) {
+      audioContext = this.activeService.audioContext;
+    } else if (this.currentEngine === 'guitarset' && (this.activeService as any).audioContext) {
+      audioContext = (this.activeService as any).audioContext;
+    } else if (this.currentEngine === 'philharmonia' && (this.activeService as any).audioContext) {
+      audioContext = (this.activeService as any).audioContext;
+    }
+
+    // Only allow playback if AudioContext is running
+    if (audioContext && audioContext.state !== 'running') {
+      console.warn(`🚫 Playback blocked: AudioContext is not running (state: ${audioContext.state}) - user interaction required`);
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
    * Play chord with exclusive service usage and tablet/mobile optimizations
    */
-  async playChord(chordName: string, duration?: number): Promise<void> {
+  async playChord(chordName: string, duration?: number): Promise<boolean | void> {
+    // Ensure service is initialized before playing
+    await this.ensureInitialized();
+    
+    // Double-check after ensureInitialized (handles edge cases)
     if (!this.activeService) {
-      throw new Error('Audio service not initialized');
+      // Try one more time if service is still not available
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+      if (!this.activeService) {
+        throw new Error('Audio service not initialized');
+      }
+    }
+
+    // CRITICAL: Autoplay policy guard - blocks playback before user interaction
+    // MUST be checked BEFORE any attempt to resume AudioContext or play audio
+    if (!this.checkAutoplayPolicy()) {
+      console.warn('🚫 Playback blocked: User interaction required (Chrome autoplay policy)');
+      console.warn('   → User must click "Ativar Áudio" button first');
+      return false;
     }
 
     // Tablet/Mobile optimization: Check timing to prevent overlaps
@@ -576,6 +753,8 @@ class AudioManager {
 
     try {
       // Ensure audio context is active (critical for tablets)
+      // NOTE: This is only called AFTER autoplay policy guard passes
+      // If AudioContext was suspended, we already returned false above
       if (this.mobileOptimizations || this.isTablet) {
         await this.ensureAudioContext();
         // Additional small delay for tablets to ensure context is ready
@@ -584,42 +763,56 @@ class AudioManager {
         }
       }
 
-      // For tablets, don't limit duration - let chords play fully
-      const actualDuration = this.isTablet ? undefined : duration;
-      
-      await this.activeService.playChord(chordName, actualDuration);
-      this.lastAudioTime = Date.now();
+    // Aplicar mecanismo de redução de fadiga auditiva
+    const { auditoryFatigueReducer } = await import('./AuditoryFatigueReducer');
+    const soundId = `chord-${chordName}`;
+    const variation = auditoryFatigueReducer.getVariation(soundId);
+    
+    // Se deve pausar, não tocar (pausa auditiva natural)
+    if (variation === null) {
+      console.debug('[UnifiedAudioService] Pausa auditiva ativa, acorde não tocado');
+      return false;
+    }
+    
+    // Aplicar variação de timing (não pitch - manter acorde correto)
+    // Variação de volume seria aplicada no serviço de áudio, mas como
+    // playChord não aceita volume como parâmetro, aplicamos apenas timing
+    const timingDelay = Math.max(0, variation.timingVariation);
+    
+    // Chamar playChord original com delay se necessário
+    if (timingDelay > 0) {
+      await new Promise(resolve => setTimeout(resolve, timingDelay));
+    }
+    
+    // For tablets, don't limit duration - let chords play fully
+    const actualDuration = this.isTablet ? undefined : duration;
+    
+    await this.activeService.playChord(chordName, actualDuration);
+    this.lastAudioTime = Date.now();
 
       console.log('✅ Chord played successfully');
+      return true;
     } catch (error) {
-      const handled = handleAudioError(error);
-      console.error('❌ Error playing chord:', handled.message, error);
+      // Usar AudioResilienceService para tratar falha
+      const recovered = await audioResilienceService.handleFailure(error, 'playChord', true);
       
-      // Não mostrar toast para erros de playback menores (pode ser spam)
-      // Apenas logar e continuar
-      if (error instanceof AudioError && !error.recoverable) {
-        toast.error('Erro de Áudio', {
-          description: handled.message,
-        });
-      }
-
-      // Tablet/Mobile fallback: Try to reinitialize and retry once
-      if ((this.mobileOptimizations || this.isTablet) && !error.message.includes('not initialized')) {
-        console.log(`📱 ${this.isTablet ? 'Tablet' : 'Mobile'}: Attempting recovery...`);
+      if (recovered) {
+        // Tentar tocar novamente após recuperação
         try {
-          await this.reinitialize();
-          const retryDelay = this.isTablet ? 300 : 200;
-          await new Promise(resolve => setTimeout(resolve, retryDelay));
           const actualDuration = this.isTablet ? undefined : duration;
           await this.activeService.playChord(chordName, actualDuration);
-          console.log('✅ Chord recovered successfully');
-          return;
+          this.lastAudioTime = Date.now();
+          return true;
         } catch (retryError) {
-          console.error('❌ Recovery failed:', retryError);
+          // Se ainda falhar, tentar fallback sonoro simples
+          await audioResilienceService.playSimpleFallback(chordName, duration || 0.5);
         }
+      } else {
+        // Se não recuperou, tentar fallback sonoro simples
+        await audioResilienceService.playSimpleFallback(chordName, duration || 0.5);
       }
 
-      throw error;
+      return false;
     }
   }
 
@@ -630,8 +823,22 @@ class AudioManager {
     // Ensure service is initialized before playing
     await this.ensureInitialized();
     
+    // Double-check after ensureInitialized (handles edge cases)
     if (!this.activeService) {
-      throw new Error('Audio service not initialized');
+      // Try one more time if service is still not available
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+      if (!this.activeService) {
+        throw new Error('Audio service not initialized');
+      }
+    }
+
+    // CRITICAL: Autoplay policy guard - blocks playback before user interaction
+    if (!this.checkAutoplayPolicy()) {
+      console.warn('🚫 Playback blocked: User interaction required (Chrome autoplay policy)');
+      console.warn('   → User must click "Ativar Áudio" button first');
+      return;
     }
 
     if (!this.activeService.playChordStrummed) {
@@ -657,8 +864,22 @@ class AudioManager {
     // Ensure service is initialized before playing
     await this.ensureInitialized();
     
+    // Double-check after ensureInitialized (handles edge cases)
     if (!this.activeService) {
-      throw new Error('Audio service not initialized');
+      // Try one more time if service is still not available
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+      if (!this.activeService) {
+        throw new Error('Audio service not initialized');
+      }
+    }
+
+    // CRITICAL: Autoplay policy guard - blocks playback before user interaction
+    if (!this.checkAutoplayPolicy()) {
+      console.warn('🚫 Playback blocked: User interaction required (Chrome autoplay policy)');
+      console.warn('   → User must click "Ativar Áudio" button first');
+      return;
     }
 
     // Mobile optimization: Adjust timing for better performance
@@ -725,12 +946,47 @@ class AudioManager {
   /**
    * Play single note - FIXED VERSION
    */
-  async playNote(note: string, duration?: number): Promise<void> {
+  async playNote(note: string, duration?: number): Promise<boolean | void> {
     // Ensure service is initialized before playing
     await this.ensureInitialized();
     
+    // Double-check after ensureInitialized (handles edge cases)
     if (!this.activeService) {
-      throw new Error('Audio service not initialized');
+      // Try one more time if service is still not available
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+      if (!this.activeService) {
+        throw new Error('Audio service not initialized');
+      }
+    }
+
+    // CRITICAL: Autoplay policy guard - blocks playback before user interaction
+    // MUST be checked BEFORE any attempt to resume AudioContext or play audio
+    if (!this.checkAutoplayPolicy()) {
+      console.warn('🚫 Playback blocked: User interaction required (Chrome autoplay policy)');
+      console.warn('   → User must click "Ativar Áudio" button first');
+      return false;
+    }
+
+    // Aplicar mecanismo de redução de fadiga auditiva
+    const { auditoryFatigueReducer } = await import('./AuditoryFatigueReducer');
+    const soundId = `note-${note}`;
+    const variation = auditoryFatigueReducer.getVariation(soundId);
+    
+    // Se deve pausar, não tocar (pausa auditiva natural)
+    if (variation === null) {
+      console.debug('[UnifiedAudioService] Pausa auditiva ativa, nota não tocada');
+      return false;
+    }
+    
+    // Aplicar variação de timing (microvariação de pitch seria aplicada no serviço de áudio)
+    // Por enquanto, aplicamos apenas timing para não alterar o timbre base
+    const timingDelay = Math.max(0, variation.timingVariation);
+    
+    // Chamar playNote original com delay se necessário
+    if (timingDelay > 0) {
+      await new Promise(resolve => setTimeout(resolve, timingDelay));
     }
 
     // Ensure note has octave (default to 4 if not specified)
@@ -753,6 +1009,7 @@ class AudioManager {
         await this.activeService.playNote(noteWithOctave, duration);
         this.lastAudioTime = Date.now();
         console.log('✅ Note played successfully', duration ? `(${duration}s)` : '');
+        return true;
       } else {
         // Fallback: Use playScale with single note
         const rootNote = note.replace(/\d+$/, '');
@@ -805,6 +1062,40 @@ class AudioManager {
         this.audioContextState = 'suspended';
         this.lastAudioTime = 0;
       }
+    } catch (error) {
+      console.error('[UnifiedAudioService] Erro ao parar áudio:', error);
+    }
+  }
+
+  /**
+   * Para todo o áudio com fade-out suave
+   * @param fadeOutDuration - Duração do fade-out em segundos (padrão: 0.15s)
+   * @returns Promise que resolve quando o fade-out termina
+   */
+  async fadeOutAll(fadeOutDuration: number = 0.15): Promise<void> {
+    try {
+      // Fade-out no AudioBus (sons de efeitos, feedback, etc.)
+      const { getAudioBus } = await import('@/audio');
+      const audioBus = getAudioBus();
+      if (audioBus && typeof audioBus.fadeOutAll === 'function') {
+        await audioBus.fadeOutAll(fadeOutDuration);
+      }
+
+      // Fade-out no metrônomo
+      const { metronomeService } = await import('@/services/MetronomeService');
+      if (metronomeService.getIsPlaying()) {
+        await metronomeService.fadeOut(fadeOutDuration);
+      }
+
+      // Parar serviços de áudio (samples, acordes, etc.)
+      // Estes geralmente são curtos e não precisam de fade-out
+      this.stopAll();
+    } catch (error) {
+      console.error('[UnifiedAudioService] Erro no fade-out, usando stop abrupto:', error);
+      // Fallback para stop abrupto
+      this.stopAll();
+    }
+  }
 
       console.log('✅ All audio stopped');
     } catch (error) {
@@ -867,6 +1158,8 @@ class AudioManager {
       hasActiveService: !!this.activeService,
       serviceType: this.activeService?.constructor?.name || 'None',
       subscribersCount: this.subscribers.size,
+      hasUserInteracted: this.hasUserInteracted,
+      audioContextState: this.audioContextState,
       timestamp: Date.now()
     };
   }
@@ -881,6 +1174,166 @@ class AudioManager {
     await new Promise(resolve => setTimeout(resolve, 500)); // Wait for cleanup
 
     return this.initialize();
+  }
+
+  /**
+   * Play an audio sample buffer
+   * This method checks playback state before allowing playback
+   * 
+   * NOTE: This is a low-level method that directly plays an AudioBuffer.
+   * Most use cases should use playNote, playChord, or playScale instead.
+   */
+  async playSample({
+    buffer,
+    channel,
+  }: {
+    buffer: AudioBuffer;
+    channel?: string;
+  }): Promise<boolean> {
+    // Ensure service is initialized
+    await this.ensureInitialized();
+
+    // CRITICAL: Check playback state - blocks if user hasn't interacted
+    if (!this.checkPlaybackState()) {
+      console.warn('🚫 Playback blocked: User interaction required (Chrome autoplay policy)');
+      console.warn('   → User must click "Ativar Áudio" button first');
+      return false;
+    }
+
+    if (!this.activeService) {
+      console.error('❌ No active audio service available');
+      return false;
+    }
+
+    try {
+      // Get AudioContext from active service
+      let audioContext: AudioContext | null = null;
+      
+      if (this.activeService.audioContext) {
+        audioContext = this.activeService.audioContext;
+      } else if (this.currentEngine === 'guitarset' && (this.activeService as any).audioContext) {
+        audioContext = (this.activeService as any).audioContext;
+      } else if (this.currentEngine === 'philharmonia' && (this.activeService as any).audioContext) {
+        audioContext = (this.activeService as any).audioContext;
+      }
+
+      if (!audioContext) {
+        console.error('❌ No AudioContext available');
+        return false;
+      }
+
+      // Create and play the buffer directly
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      
+      // Get gain node from active service if available
+      let gainNode: GainNode | null = null;
+      if (this.activeService.gainNode) {
+        gainNode = this.activeService.gainNode;
+      } else {
+        // Create a temporary gain node
+        gainNode = audioContext.createGain();
+        gainNode.connect(audioContext.destination);
+      }
+      
+      source.connect(gainNode);
+      source.start(0);
+      
+      this.lastAudioTime = Date.now();
+      console.log('✅ Sample played successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Error playing sample:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 🎵 Ritual Sonoro de Ativação
+   * 
+   * Toca um som curto, neutro e confortável que confirma ao usuário que o sistema
+   * de áudio está ativo e pronto para uso.
+   * 
+   * MOTIVO PEDAGÓGICO:
+   * - Confirmação auditiva imediata de que o sistema está funcionando
+   * - Estabelece confiança do usuário no sistema de áudio
+   * - Feedback não intrusivo que não interfere em treinos ou teoria
+   * - Cria uma experiência mais profissional e polida
+   * 
+   * CARACTERÍSTICAS:
+   * - Duração: <300ms (250ms)
+   * - Frequência: A4 (440Hz) - tom neutro e confortável
+   * - Volume: Baixo (0.08) - não intrusivo
+   * - Tipo: Sine wave - som suave e agradável
+   * - Canal: 'effects' - não interfere com outros canais
+   * 
+   * REGRAS:
+   * - Toca apenas uma vez por sessão
+   * - Fallback silencioso se áudio não estiver pronto
+   * - Não bloqueia a inicialização se falhar
+   * 
+   * LOCAL DE DISPARO:
+   * - UnifiedAudioService.markUserInteraction() - após primeira interação
+   * - UnifiedAudioService.ensureInitialized() - após inicialização completa
+   */
+  private async playActivationRitual(): Promise<void> {
+    // Garantir que toca apenas uma vez por sessão
+    if (this.hasPlayedActivationRitual) {
+      return;
+    }
+
+    // Verificar se o áudio está pronto
+    if (!this.isInitialized || !this.activeService) {
+      console.debug('[AudioManager] Ritual sonoro não tocado: áudio não está pronto');
+      return;
+    }
+
+    // Verificar se há interação do usuário
+    if (!this.hasUserInteracted) {
+      console.debug('[AudioManager] Ritual sonoro não tocado: sem interação do usuário');
+      return;
+    }
+
+    try {
+      // Obter AudioBus de forma assíncrona para evitar dependência circular
+      const { getAudioBus } = await import('@/audio');
+      const audioBus = getAudioBus();
+      
+      if (!audioBus) {
+        console.debug('[AudioManager] Ritual sonoro não tocado: AudioBus não disponível');
+        return;
+      }
+
+      // Verificar se AudioEngine está pronto
+      const { AudioEngine } = await import('@/audio');
+      const audioEngine = AudioEngine.getInstance();
+      
+      if (!audioEngine.isReady()) {
+        console.debug('[AudioManager] Ritual sonoro não tocado: AudioEngine não está pronto');
+        return;
+      }
+
+      // Tocar som de confirmação: A4 (440Hz) - tom neutro e confortável
+      // Duração: 250ms - curto o suficiente para não distrair
+      // Volume: 0.08 - baixo e não intrusivo
+      const success = audioBus.playOscillator({
+        frequency: 440, // A4 - tom neutro e confortável
+        type: 'sine', // Sine wave - som suave e agradável
+        duration: 0.25, // 250ms - <300ms conforme requisito
+        channel: 'effects', // Canal effects - não interfere com outros canais
+        volume: 0.08, // Volume baixo - não intrusivo
+      });
+
+      if (success) {
+        this.hasPlayedActivationRitual = true;
+        console.log('🎵 [AudioManager] Ritual sonoro de ativação tocado');
+      } else {
+        console.debug('[AudioManager] Ritual sonoro não pôde ser tocado (fallback silencioso)');
+      }
+    } catch (error) {
+      // Fallback silencioso: não interromper o fluxo se o ritual falhar
+      console.debug('[AudioManager] Ritual sonoro não pôde ser tocado (fallback silencioso):', error);
+    }
   }
 }
 
@@ -898,10 +1351,43 @@ export const unifiedAudioService = {
   playScale: (scaleName: string, root: string, intervals: number[], duration?: number) => audioManager.playScale(scaleName, root, intervals, duration),
   playNote: (note: string, duration?: number) => audioManager.playNote(note, duration),
   stopAll: () => audioManager.stopAll(),
+  fadeOutAll: (fadeOutDuration?: number) => audioManager.fadeOutAll(fadeOutDuration),
   setEQ: (bassGain: number, midGain: number, trebleGain: number) => audioManager.setEQ(bassGain, midGain, trebleGain),
   dispose: () => audioManager.dispose(),
 
   // Additional methods for compatibility
   getStatus: () => audioManager.getStatus(),
-  reinitialize: () => audioManager.reinitialize()
+  reinitialize: () => audioManager.reinitialize(),
+  
+  // Expose audioManager for testing
+  __audioManager: audioManager,
+  
+  // Singleton getInstance pattern for testing
+  getInstance: () => audioManager,
+  
+  // Play sample method
+  playSample: (params: { buffer: AudioBuffer; channel?: string }) => audioManager.playSample(params),
+  
+  // User interaction methods
+  markUserInteraction: () => audioManager.markUserInteraction(),
+  hasUserInteractedWithAudio: () => audioManager.hasUserInteractedWithAudio(),
+  
+  // AudioContext access for scheduling
+  getAudioContext: () => {
+    // Get AudioContext from active service
+    if (!audioManager['activeService']) return null;
+    
+    const activeService = audioManager['activeService'];
+    const currentEngine = audioManager['currentEngine'];
+    
+    if (activeService.audioContext) {
+      return activeService.audioContext;
+    } else if (currentEngine === 'guitarset' && (activeService as any).audioContext) {
+      return (activeService as any).audioContext;
+    } else if (currentEngine === 'philharmonia' && (activeService as any).audioContext) {
+      return (activeService as any).audioContext;
+    }
+    
+    return null;
+  },
 };

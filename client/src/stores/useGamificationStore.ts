@@ -312,10 +312,24 @@ export const useGamificationStore = create<GamificationStore>()(
           xpToNextLevel: xpForNext,
         });
 
-        // Feedback tátil ao subir de nível
+        // Feedback tátil e sonoro ao subir de nível
         if (leveledUp) {
           import('@/services/HapticFeedbackService').then(({ hapticFeedbackService }) => {
             hapticFeedbackService.levelUp();
+          });
+          // Som de level up (com rate limiting)
+          import('@/services/GamificationSoundService').then(({ gamificationSoundService }) => {
+            gamificationSoundService.playSound('level_up', 0.15);
+          });
+        } else if (amount >= 50) {
+          // Som de XP grande para ganhos significativos
+          import('@/services/GamificationSoundService').then(({ gamificationSoundService }) => {
+            gamificationSoundService.playSound('xp_bonus', 0.12);
+          });
+        } else if (amount > 0) {
+          // Som de XP pequeno para ganhos normais
+          import('@/services/GamificationSoundService').then(({ gamificationSoundService }) => {
+            gamificationSoundService.playSound('xp_gain', 0.1);
           });
         }
       },
@@ -330,6 +344,11 @@ export const useGamificationStore = create<GamificationStore>()(
               if (completed && !mission.completed) {
                 // Award XP
                 get().addXP(mission.xpReward);
+                
+                // Som de missão completada
+                import('@/services/GamificationSoundService').then(({ gamificationSoundService }) => {
+                  gamificationSoundService.playSound('mission_complete', 0.12);
+                });
               }
               
               return {
@@ -350,6 +369,11 @@ export const useGamificationStore = create<GamificationStore>()(
           
           // Award XP
           get().addXP(achievement.xpReward);
+          
+          // Som de achievement desbloqueado
+          import('@/services/GamificationSoundService').then(({ gamificationSoundService }) => {
+            gamificationSoundService.playSound('achievement', 0.15);
+          });
           
           return {
             achievements: state.achievements.map((a) =>
@@ -392,6 +416,13 @@ export const useGamificationStore = create<GamificationStore>()(
           // Check streak achievements
           if (newStreak === 7) {
             get().unlockAchievement('week-streak');
+          }
+          
+          // Som de milestone de streak (a cada 5 dias)
+          if (newStreak > 0 && newStreak % 5 === 0) {
+            import('@/services/GamificationSoundService').then(({ gamificationSoundService }) => {
+              gamificationSoundService.playSound('streak_milestone', 0.1);
+            });
           }
         } else if (daysSinceLastActivity <= 2 && state.level <= 3) {
           // Para iniciantes (nível 1-3), permite 1 dia de folga sem perder streak

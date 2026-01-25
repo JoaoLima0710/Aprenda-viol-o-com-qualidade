@@ -23,6 +23,7 @@ class AudioMixer {
 
   /**
    * Inicializa os canais de mixagem
+   * Sincroniza volume com store global se disponível
    */
   public async initialize(): Promise<void> {
     await this.audioEngine.initialize();
@@ -32,6 +33,22 @@ class AudioMixer {
     this.createChannel('scales', 0.8);
     this.createChannel('metronome', 0.7);
     this.createChannel('effects', 0.5);
+    
+    // Sincronizar volume master com store global (se disponível)
+    try {
+      const { useAudioSettingsStore } = await import('@/stores/useAudioSettingsStore');
+      const store = useAudioSettingsStore.getState();
+      if (store.masterVolume !== undefined) {
+        this.masterVolume = store.masterVolume;
+        this.previousVolume = store.masterVolume;
+        // Aplicar volume ao AudioEngine
+        this.audioEngine.setMasterVolume(this.isMuted ? 0 : this.masterVolume);
+        console.log(`[AudioMixer] Volume sincronizado com store: ${Math.round(this.masterVolume * 100)}%`);
+      }
+    } catch (error) {
+      // Store pode não estar disponível ainda, usar padrão
+      console.debug('[AudioMixer] Store não disponível, usando volume padrão');
+    }
   }
 
   /**
@@ -81,10 +98,15 @@ class AudioMixer {
 
   /**
    * Define o volume master
+   * Sincroniza com store global automaticamente
    */
   public setMasterVolume(volume: number): void {
     this.masterVolume = Math.max(0, Math.min(1, volume));
     this.audioEngine.setMasterVolume(this.isMuted ? 0 : this.masterVolume);
+    
+    // Sincronizar com store global (se disponível)
+    // Nota: Não atualizar store aqui para evitar loop - store atualiza AudioMixer
+    // O VolumeControl já atualiza o store diretamente
   }
 
   /**

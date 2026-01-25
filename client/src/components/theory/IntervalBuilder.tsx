@@ -4,12 +4,14 @@
  */
 
 import { useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, CheckCircle2, XCircle, RotateCcw, Music } from 'lucide-react';
+import { Play, CheckCircle2, XCircle, RotateCcw, Music, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAudio } from '@/hooks/useAudio';
 import { useGamificationStore } from '@/stores/useGamificationStore';
+import { unifiedAudioService } from '@/services/UnifiedAudioService';
 
 const CHROMATIC_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -60,27 +62,17 @@ export function IntervalBuilder() {
     return semitones;
   };
 
-  const { playNotes } = useAudio();
-  const handleNoteClick = async (note: string) => {
+  const handleNoteClick = (note: string) => {
+    // REMOVIDO: Autoplay ao clicar - áudio agora é apenas manual via botão "Ouvir Intervalo"
     if (!firstNote) {
       setFirstNote(note);
       setSecondNote(null);
       setFeedback(null);
-      try {
-        await playNotes([`${note}4`], { duration: 0.5 });
-      } catch (error) {
-        console.error('Erro ao tocar nota:', error);
-      }
     } else if (!secondNote) {
       setSecondNote(note);
       const interval = calculateInterval(firstNote, note);
       const intervalName = INTERVAL_NAMES[interval] || 'Desconhecido';
       const example = INTERVAL_EXAMPLES[interval];
-      try {
-        await playNotes([`${note}4`], { duration: 0.5 });
-      } catch (error) {
-        console.error('Erro ao tocar nota:', error);
-      }
       setFeedback({
         correct: true,
         message: `Intervalo: ${intervalName} (${interval} semitons)${example ? ` - Exemplo: ${example}` : ''}`,
@@ -97,17 +89,53 @@ export function IntervalBuilder() {
     setFeedback(null);
   };
 
+  const { playNotes } = useAudio();
+  const playbackAbortRef = React.useRef<AbortController | null>(null);
+
+  // Parar áudio quando componente desmontar ou notas mudarem
+  React.useEffect(() => {
+    return () => {
+      if (playbackAbortRef.current) {
+        playbackAbortRef.current.abort();
+      }
+      try {
+        unifiedAudioService.stopAll();
+      } catch (error) {
+        // Ignorar erros no cleanup
+      }
+    };
+  }, [firstNote, secondNote]);
+
   const handlePlayInterval = async () => {
     if (!firstNote || !secondNote) return;
+    
+    // Se já está tocando, parar
+    if (isPlaying) {
+      if (playbackAbortRef.current) {
+        playbackAbortRef.current.abort();
+      }
+      await unifiedAudioService.stopAll();
+      setIsPlaying(false);
+      return;
+    }
+
     setIsPlaying(true);
+    playbackAbortRef.current = new AbortController();
+    
     try {
+      await unifiedAudioService.ensureInitialized();
       await playNotes([`${firstNote}4`], { duration: 0.5 });
+      if (playbackAbortRef.current?.signal.aborted) return;
       await new Promise(resolve => setTimeout(resolve, 600));
+      if (playbackAbortRef.current?.signal.aborted) return;
       await playNotes([`${secondNote}4`], { duration: 0.5 });
     } catch (error) {
       console.error('Erro ao tocar intervalo:', error);
     } finally {
-      setIsPlaying(false);
+      if (!playbackAbortRef.current?.signal.aborted) {
+        setIsPlaying(false);
+      }
+      playbackAbortRef.current = null;
     }
   };
 
@@ -216,11 +244,24 @@ export function IntervalBuilder() {
       <div className="flex gap-3">
         <Button
           onClick={handlePlayInterval}
-          disabled={!firstNote || !secondNote || isPlaying}
-          className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+          disabled={!firstNote || !secondNote}
+          className={`flex-1 ${
+            isPlaying
+              ? 'bg-red-500 hover:bg-red-600'
+              : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
+          }`}
         >
-          <Play className="w-4 h-4 mr-2" />
-          Ouvir Intervalo
+          {isPlaying ? (
+            <>
+              <VolumeX className="w-4 h-4 mr-2" />
+              Parar
+            </>
+          ) : (
+            <>
+              <Play className="w-4 h-4 mr-2" />
+              Ouvir Intervalo
+            </>
+          )}
         </Button>
         
         <Button

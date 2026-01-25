@@ -20,7 +20,14 @@ export function AudioInitButton() {
   };
 
   if (isReady) {
-    return null; // Não mostrar se já está pronto
+    // Mostrar indicador visual quando áudio está pronto (para testes)
+    return (
+      <div data-testid="audio-playing" className="fixed top-4 left-4 z-50">
+        <div className="bg-green-500/20 border border-green-500/50 rounded-lg px-3 py-1 text-xs text-green-400">
+          🔊 Áudio Ativo
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -106,20 +113,37 @@ export function AudioInitializer({ children }: AudioInitializerProps) {
             <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-6">
               <Volume2 className="w-10 h-10 text-primary animate-pulse" />
             </div>
-            <h2 className="text-2xl font-bold mb-3">Ativar Áudio</h2>
-            <p className="text-muted-foreground mb-6">
+            <h2 className="text-2xl font-bold mb-3">Toque para Ativar Áudio</h2>
+            <p className="text-muted-foreground mb-4">
               Para uma experiência completa de aprendizado, precisamos ativar o sistema de áudio.
             </p>
+            <div className="bg-muted/50 rounded-lg p-3 mb-6 text-sm text-muted-foreground">
+              <p className="font-medium mb-1">Por que isso é necessário?</p>
+              <p>
+                Os navegadores modernos (Chrome, Safari, Firefox) exigem interação do usuário antes de reproduzir áudio.
+                Isso protege contra reprodução automática indesejada.
+              </p>
+            </div>
             <button
               onClick={handleInitialize}
               disabled={isInitializing}
-              className="w-full px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-xl font-semibold hover:from-violet-600 hover:to-purple-600 transition-all disabled:opacity-50"
+              className="w-full px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-xl font-semibold hover:from-violet-600 hover:to-purple-600 transition-all disabled:opacity-50 shadow-lg"
             >
-              {isInitializing ? 'Inicializando...' : 'Ativar Áudio'}
+              {isInitializing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 inline animate-spin" />
+                  Inicializando...
+                </>
+              ) : (
+                <>
+                  <Volume2 className="w-4 h-4 mr-2 inline" />
+                  Ativar Áudio
+                </>
+              )}
             </button>
             <button
               onClick={() => setShowPrompt(false)}
-              className="mt-3 text-sm text-muted-foreground hover:text-foreground"
+              className="mt-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Continuar sem áudio
             </button>

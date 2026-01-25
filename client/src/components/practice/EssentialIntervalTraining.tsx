@@ -12,6 +12,10 @@ import { unifiedAudioService } from '@/services/UnifiedAudioService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import {
+  STIMULUS_DURATIONS,
+  STIMULUS_SPACING,
+} from '@/services/AuditoryStimulusConfig';
 
 // Intervalos essenciais para iniciantes (sem nomenclatura técnica)
 const ESSENTIAL_INTERVALS = [
@@ -204,9 +208,9 @@ export function EssentialIntervalTraining() {
       await unifiedAudioService.ensureInitialized();
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Duração otimizada para comparação auditiva
-      const noteDuration = 0.85;
-      const delayBetweenNotes = 500; // Delay suficiente para processar cada nota
+      // Usar durações e espaçamentos padronizados para máxima clareza
+      const noteDuration = STIMULUS_DURATIONS.interval;
+      const delayBetweenNotes = STIMULUS_SPACING.betweenIntervals;
       
       console.log('🎵 [Intervalos Essenciais] Tocando:', exerciseToPlay.firstNote, '→', exerciseToPlay.secondNote);
       
@@ -324,8 +328,9 @@ export function EssentialIntervalTraining() {
       await unifiedAudioService.ensureInitialized();
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      const noteDuration = 0.85;
-      const delayBetweenNotes = 500;
+      // Usar durações e espaçamentos padronizados para máxima clareza
+      const noteDuration = STIMULUS_DURATIONS.interval;
+      const delayBetweenNotes = STIMULUS_SPACING.betweenIntervals;
       
       // Tocar novamente o exercício (resposta correta)
       await unifiedAudioService.playNote(currentExercise.firstNote, noteDuration);

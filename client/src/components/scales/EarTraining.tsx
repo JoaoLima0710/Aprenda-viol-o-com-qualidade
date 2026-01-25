@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Mic, Volume2, Music2, CheckCircle, RotateCcw, Settings } from 'lucide-react';
 import { unifiedAudioService } from '@/services/UnifiedAudioService';
 import { motion, AnimatePresence } from 'framer-motion';
+import { STIMULUS_DURATIONS } from '@/services/AuditoryStimulusConfig';
 
 interface EarTrainingProps {
   scaleName: string;
@@ -52,8 +53,8 @@ export function EarTraining({ scaleName, root, intervals }: EarTrainingProps) {
       
       const note = scaleNotes[degree];
       console.log('🎵 [Ear Training] Tocando grau', degree + 1, ':', note);
-      // Duração otimizada para percepção auditiva: 0.9s - clara e distinta
-      await unifiedAudioService.playNote(`${note}4`, 0.9);
+      // Duração padronizada para máxima clareza auditiva
+      await unifiedAudioService.playNote(`${note}4`, STIMULUS_DURATIONS.singleNote);
       
       // Auto-replay após 3 segundos se habilitado
       if (autoReplay) {

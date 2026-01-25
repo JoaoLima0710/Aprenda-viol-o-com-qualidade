@@ -34,6 +34,9 @@ import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { metronomeService } from '@/services/MetronomeService';
+import { rhythmScheduler } from '@/services/RhythmScheduler';
+import { unifiedAudioService } from '@/services/UnifiedAudioService';
+import { usePracticeMetricsStore } from '@/stores/usePracticeMetricsStore';
 
 type ExerciseType = 'backbeat' | 'subdivision' | 'pulse';
 
@@ -89,9 +92,13 @@ export function RhythmTraining({ onComplete, onExit }: RhythmTrainingProps) {
   
   // Refs
   const expectedBeatTimesRef = useRef<Map<number, number>>(new Map());
+  const expectedAudioTimesRef = useRef<Map<number, number>>(new Map()); // AudioContext times
   const beatCallbackRef = useRef<((beat: number, isDownbeat: boolean) => void) | null>(null);
   const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const exerciseStartTimeRef = useRef<number>(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  
+  const { recordSession } = usePracticeMetricsStore();
 
   // Configurar exercício
   useEffect(() => {
@@ -102,18 +109,30 @@ export function RhythmTraining({ onComplete, onExit }: RhythmTrainingProps) {
     setScore(0);
     setAttempts(0);
     setCurrentFeedback('');
+    setFeedbackExplanation('');
     setFeedbackColor('gray');
   }, [exerciseType]);
 
-  // Configurar callback do metrônomo
+  // Configurar callback do metrônomo com compensação de latência
   useEffect(() => {
     beatCallbackRef.current = (beat: number, isDownbeat: boolean) => {
       setCurrentBeat(beat);
       setIsDownbeat(isDownbeat);
       
-      // Armazenar tempo esperado para este beat
+      // Armazenar tempo esperado usando AudioContext (preciso) e Date.now() (para feedback visual)
       if (targetBeats.includes(beat)) {
-        expectedBeatTimesRef.current.set(beat, Date.now());
+        const audioContext = unifiedAudioService.getAudioContext();
+        if (audioContext) {
+          audioContextRef.current = audioContext;
+          const audioTime = audioContext.currentTime;
+          expectedAudioTimesRef.current.set(beat, audioTime);
+          // Usar tempo visual compensado para feedback
+          const visualTime = rhythmScheduler.getCompensatedVisualTime(audioTime);
+          expectedBeatTimesRef.current.set(beat, Date.now() + (visualTime - audioTime) * 1000);
+        } else {
+          // Fallback se AudioContext não estiver disponível
+          expectedBeatTimesRef.current.set(beat, Date.now());
+        }
       }
     };
 
@@ -145,6 +164,7 @@ export function RhythmTraining({ onComplete, onExit }: RhythmTrainingProps) {
     if (currentExpectedTime === undefined) {
       // Usuário bateu em tempo que não deveria
       setCurrentFeedback('Espere o tempo correto!');
+      setFeedbackExplanation('Você bateu antes do metrônomo indicar o tempo. Aguarde o tempo correto aparecer antes de bater.');
       setFeedbackColor('red');
       setAttempts((prev) => prev + 1);
       
@@ -153,8 +173,9 @@ export function RhythmTraining({ onComplete, onExit }: RhythmTrainingProps) {
       }
       feedbackTimeoutRef.current = setTimeout(() => {
         setCurrentFeedback('');
+        setFeedbackExplanation('');
         setFeedbackColor('gray');
-      }, 1500);
+      }, 2500);
       return;
     }
 
@@ -164,6 +185,7 @@ export function RhythmTraining({ onComplete, onExit }: RhythmTrainingProps) {
     // Verificar se é um beat alvo
     if (!targetBeats.includes(currentBeat)) {
       setCurrentFeedback('Este não é o tempo correto!');
+      setFeedbackExplanation(`Você deve bater apenas nos tempos ${targetBeats.map(b => b + 1).join(' e ')}. Este é o tempo ${currentBeat + 1}.`);
       setFeedbackColor('red');
       setAttempts((prev) => prev + 1);
       
@@ -172,8 +194,9 @@ export function RhythmTraining({ onComplete, onExit }: RhythmTrainingProps) {
       }
       feedbackTimeoutRef.current = setTimeout(() => {
         setCurrentFeedback('');
+        setFeedbackExplanation('');
         setFeedbackColor('gray');
-      }, 1500);
+      }, 2500);
       return;
     }
 
@@ -188,25 +211,48 @@ export function RhythmTraining({ onComplete, onExit }: RhythmTrainingProps) {
     setTimingResults((prev) => [...prev.slice(-19), result]); // Manter últimas 20
     setAttempts((prev) => prev + 1);
 
-    // Calcular feedback
+    // Calcular feedback explicativo
     let feedback = '';
+    let feedbackExplanation = '';
     let color: 'green' | 'yellow' | 'red' | 'gray' = 'gray';
 
     if (absDelay <= TIMING_TOLERANCE_MS) {
       feedback = 'Perfeito! 🎯';
+      feedbackExplanation = 'Você está batendo exatamente no tempo! Continue assim!';
       color = 'green';
       setScore((prev) => prev + 1);
     } else if (delay > 0) {
       // Atrasado
-      feedback = `Atrasado ~${Math.round(delay)}ms`;
-      color = delay < 100 ? 'yellow' : 'red';
+      const delayMs = Math.round(delay);
+      if (delayMs < 100) {
+        feedback = `Atrasado ${delayMs}ms`;
+        feedbackExplanation = 'Você está batendo um pouco depois do tempo. Tente antecipar o movimento para bater no tempo certo.';
+      } else if (delayMs < 200) {
+        feedback = `Atrasado ${delayMs}ms`;
+        feedbackExplanation = 'Você está batendo depois do tempo. Pratique contar os tempos em voz alta ("1, 2, 3, 4") e bater junto com o metrônomo.';
+      } else {
+        feedback = `Atrasado ${delayMs}ms`;
+        feedbackExplanation = 'Você está batendo muito depois do tempo. Foque em ouvir o metrônomo primeiro e só depois bater junto. Não tente adivinhar o tempo!';
+      }
+      color = delayMs < 100 ? 'yellow' : delayMs < 200 ? 'yellow' : 'red';
     } else {
       // Adiantado
-      feedback = `Adiantado ~${Math.round(absDelay)}ms`;
-      color = absDelay < 100 ? 'yellow' : 'red';
+      const absDelayMs = Math.round(absDelay);
+      if (absDelayMs < 100) {
+        feedback = `Adiantado ${absDelayMs}ms`;
+        feedbackExplanation = 'Você está batendo um pouco antes do tempo. Aguarde o metrônomo e bata junto com ele.';
+      } else if (absDelayMs < 200) {
+        feedback = `Adiantado ${absDelayMs}ms`;
+        feedbackExplanation = 'Você está batendo antes do tempo. Pratique ouvir o metrônomo primeiro e só depois bater junto.';
+      } else {
+        feedback = `Adiantado ${absDelayMs}ms`;
+        feedbackExplanation = 'Você está batendo muito antes do tempo. Ouça o metrônomo com atenção e bata apenas quando ele tocar. Não antecipe demais!';
+      }
+      color = absDelayMs < 100 ? 'yellow' : absDelayMs < 200 ? 'yellow' : 'red';
     }
 
     setCurrentFeedback(feedback);
+    setFeedbackExplanation(feedbackExplanation);
     setFeedbackColor(color);
 
     // Limpar feedback após 1.5s
@@ -215,13 +261,26 @@ export function RhythmTraining({ onComplete, onExit }: RhythmTrainingProps) {
     }
     feedbackTimeoutRef.current = setTimeout(() => {
       setCurrentFeedback('');
+      setFeedbackExplanation('');
       setFeedbackColor('gray');
-    }, 1500);
+    }, 2500);
   }, [isPlaying, currentBeat, targetBeats]);
 
   // Iniciar exercício
   const handleStart = async () => {
     try {
+      // Registrar sessão de lifecycle
+      const { audioLifecycleManager } = await import('@/services/AudioLifecycleManager');
+      audioLifecycleManager.startSession('training', 'RhythmTraining', true);
+      
+      // Definir contexto de treino (prioridade máxima)
+      const { audioPriorityManager } = await import('@/services/AudioPriorityManager');
+      audioPriorityManager.setContext('training');
+      
+      // Feedback sonoro de início de treino
+      const { actionFeedbackService } = await import('@/services/ActionFeedbackService');
+      actionFeedbackService.playActionFeedback('training_start');
+      
       await metronomeService.initialize();
       await metronomeService.start(bpm, '4/4');
       setIsPlaying(true);
@@ -229,31 +288,91 @@ export function RhythmTraining({ onComplete, onExit }: RhythmTrainingProps) {
       setScore(0);
       setAttempts(0);
       setCurrentFeedback('');
+      setFeedbackExplanation('');
       setFeedbackColor('gray');
       expectedBeatTimesRef.current.clear();
+      expectedAudioTimesRef.current.clear();
       exerciseStartTimeRef.current = Date.now();
+      
+      // Inicializar RhythmScheduler para compensação de latência
+      try {
+        await rhythmScheduler.initialize();
+        const audioContext = unifiedAudioService.getAudioContext();
+        if (audioContext) {
+          audioContextRef.current = audioContext;
+          exerciseStartTimeRef.current = audioContext.currentTime * 1000; // Converter para ms
+        }
+      } catch (error) {
+        console.warn('[RhythmTraining] Erro ao inicializar RhythmScheduler:', error);
+      }
     } catch (error) {
       console.error('Erro ao iniciar metrônomo:', error);
     }
   };
 
-  // Pausar exercício
+  // Pausar exercício (registrar métricas se houver tentativas)
   const handlePause = () => {
+    // Pausar sessão de lifecycle
+    import('@/services/AudioLifecycleManager').then(({ audioLifecycleManager }) => {
+      audioLifecycleManager.pauseSession();
+    });
+    
+    // Remover contexto de treino
+    import('@/services/AudioPriorityManager').then(({ audioPriorityManager }) => {
+      audioPriorityManager.setContext(null);
+    });
+    
     metronomeService.stop();
+    rhythmScheduler.cancelAll();
     setIsPlaying(false);
+    
+    // Registrar sessão se houver tentativas
+    if (attempts > 0) {
+      const duration = Math.round((Date.now() - exerciseStartTimeRef.current) / 1000);
+      const accuracy = attempts > 0 ? Math.round((score / attempts) * 100) : 0;
+      
+      // Calcular consistência baseado na variação dos delays
+      const delays = timingResults.map(r => Math.abs(r.delay));
+      const avgDelay = delays.length > 0 
+        ? delays.reduce((sum, d) => sum + d, 0) / delays.length 
+        : 0;
+      const consistency = avgDelay > 0 
+        ? Math.max(0, Math.round(100 - (avgDelay / 10))) // Menor delay = maior consistência
+        : 100;
+      
+      recordSession({
+        type: 'rhythm',
+        duration,
+        accuracy,
+        attempts,
+        correct: score,
+        consistency,
+        metadata: {
+          exerciseType: exerciseType,
+          bpm,
+        },
+      });
+      
+      if (onComplete) {
+        onComplete(accuracy, avgDelay);
+      }
+    }
   };
 
-  // Parar e resetar
+  // Parar e resetar (com variação controlada - mantém tipo de exercício mas reseta progresso)
   const handleReset = () => {
     metronomeService.stop();
+    rhythmScheduler.cancelAll();
     setIsPlaying(false);
     setCurrentBeat(0);
     setTimingResults([]);
     setScore(0);
     setAttempts(0);
     setCurrentFeedback('');
+    setFeedbackExplanation('');
     setFeedbackColor('gray');
     expectedBeatTimesRef.current.clear();
+    expectedAudioTimesRef.current.clear();
   };
 
   // Calcular estatísticas
@@ -378,44 +497,71 @@ export function RhythmTraining({ onComplete, onExit }: RhythmTrainingProps) {
         </p>
       </div>
 
-      {/* Feedback de Timing */}
+      {/* Feedback de Timing Explicativo */}
       <AnimatePresence>
         {currentFeedback && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className={`mb-4 p-4 rounded-lg text-center ${
+            className={`mb-4 p-4 rounded-lg border-2 ${
               feedbackColor === 'green'
-                ? 'bg-green-500/20 border border-green-500/50'
+                ? 'bg-green-500/10 border-green-500/50'
                 : feedbackColor === 'yellow'
-                ? 'bg-yellow-500/20 border border-yellow-500/50'
+                ? 'bg-yellow-500/10 border-yellow-500/50'
                 : feedbackColor === 'red'
-                ? 'bg-red-500/20 border border-red-500/50'
-                : 'bg-gray-500/20 border border-gray-500/50'
+                ? 'bg-red-500/10 border-red-500/50'
+                : 'bg-gray-500/10 border-gray-500/50'
             }`}
           >
-            <div className="flex items-center justify-center gap-2">
-              {feedbackColor === 'green' && <CheckCircle2 className="w-5 h-5 text-green-400" />}
-              {feedbackColor === 'yellow' && <TrendingUp className="w-5 h-5 text-yellow-400" />}
-              {feedbackColor === 'red' && <TrendingDown className="w-5 h-5 text-red-400" />}
-              <span
-                className={`text-lg font-semibold ${
-                  feedbackColor === 'green'
-                    ? 'text-green-400'
-                    : feedbackColor === 'yellow'
-                    ? 'text-yellow-400'
-                    : feedbackColor === 'red'
-                    ? 'text-red-400'
-                    : 'text-gray-400'
-                }`}
-              >
-                {currentFeedback}
-              </span>
+            <div className="flex items-start gap-3">
+              {feedbackColor === 'green' && <CheckCircle2 className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />}
+              {feedbackColor === 'yellow' && <TrendingUp className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />}
+              {feedbackColor === 'red' && <TrendingDown className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />}
+              <div className="flex-1">
+                <p
+                  className={`text-lg font-semibold mb-1 ${
+                    feedbackColor === 'green'
+                      ? 'text-green-400'
+                      : feedbackColor === 'yellow'
+                      ? 'text-yellow-400'
+                      : feedbackColor === 'red'
+                      ? 'text-red-400'
+                      : 'text-gray-400'
+                  }`}
+                >
+                  {currentFeedback}
+                </p>
+                {feedbackExplanation && (
+                  <p className="text-sm text-gray-300">
+                    {feedbackExplanation}
+                  </p>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Meta Clara do Exercício */}
+      <div className="mb-6 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
+        <div className="flex items-center gap-2 mb-2">
+          <Target className="w-5 h-5 text-blue-400" />
+          <h4 className="text-sm font-bold text-white">Meta do Exercício</h4>
+        </div>
+        <div className="space-y-2 text-sm text-gray-300">
+          <p>
+            <strong className="text-white">Objetivo:</strong> Bater nos tempos {config.targetBeats.map(b => b + 1).join(', ')} com precisão (dentro de ±50ms).
+          </p>
+          <p>
+            <strong className="text-white">Para melhorar:</strong> Foque em bater{' '}
+            <strong className="text-green-400">junto com o metrônomo</strong>, não antes ou depois.
+          </p>
+          <p className="text-xs text-gray-400 mt-2">
+            💡 <strong>Dica:</strong> Ouça o metrônomo primeiro, depois bata junto. Não tente adivinhar o tempo!
+          </p>
+        </div>
+      </div>
 
       {/* Progresso */}
       {attempts > 0 && (

@@ -10,6 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Play, Volume2, Music } from 'lucide-react';
 import { unifiedAudioService } from '@/services/UnifiedAudioService';
 import { motion } from 'framer-motion';
+import {
+  STIMULUS_DURATIONS,
+  STIMULUS_SPACING,
+} from '@/services/AuditoryStimulusConfig';
 
 interface Interval {
   name: string;
@@ -48,41 +52,68 @@ export function IntervalTheory({ rootNote = 'C' }: IntervalTheoryProps) {
     setSelectedInterval(interval);
     
     try {
+      // Definir contexto de teoria musical e marcar como tocando
+      const { audioPriorityManager } = await import('@/services/AudioPriorityManager');
+      audioPriorityManager.setContext('music_theory');
+      audioPriorityManager.setTheoryPlaying(true);
+      
       // CRÍTICO para tablets: Garantir inicialização primeiro
       await unifiedAudioService.ensureInitialized();
-      // Delay extra para tablets garantirem AudioContext ativo
-      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Obter AudioContext e inicializar scheduler
+      const audioContext = unifiedAudioService.getAudioContext();
+      if (!audioContext) {
+        console.error('❌ IntervalTheory: No AudioContext available');
+        return;
+      }
+      
+      // Inicializar scheduler com AudioContext (fonte de verdade)
+      const { audioContextScheduler } = await import('@/services/AudioContextScheduler');
+      audioContextScheduler.initialize(audioContext);
       
       console.log('🎵 [Ear Training] Tocando intervalo:', interval.name);
       
-      // Durações otimizadas para percepção auditiva:
-      // - Notas individuais: 0.85s (clara e distinta)
-      // - Notas juntas: 0.9s (suficiente para distinguir)
-      // - Delay entre notas: 500ms (tempo adequado para processar)
+      // Usar durações e espaçamentos padronizados para máxima clareza
+      const noteDuration = STIMULUS_DURATIONS.interval;
+      const spacingBetweenNotes = STIMULUS_SPACING.betweenIntervals;
       
-      // Tocar nota raiz
-      await unifiedAudioService.playNote(`${rootNote}4`, 0.85);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const currentTime = audioContext.currentTime;
       
-      // Tocar nota do intervalo
+      // Tocar nota raiz - usar AudioContext.currentTime
+      await unifiedAudioService.playNote(`${rootNote}4`, noteDuration);
+      
+      // Agendar próxima nota usando AudioContext time com espaçamento padronizado
+      const secondNoteTime = currentTime + noteDuration + spacingBetweenNotes / 1000;
       const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
       const rootIndex = NOTES.indexOf(rootNote);
       const targetIndex = (rootIndex + interval.semitones) % 12;
       const targetNote = NOTES[targetIndex];
       
-      await unifiedAudioService.playNote(`${targetNote}4`, 0.85);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Tocar ambas juntas (uma após a outra para tablets)
-      // Delay reduzido para 80ms para melhor percepção de harmonia
-      await unifiedAudioService.playNote(`${rootNote}4`, 0.9);
-      await new Promise(resolve => setTimeout(resolve, 80));
-      await unifiedAudioService.playNote(`${targetNote}4`, 0.9);
+      // Agendar segunda nota usando scheduler
+      audioContextScheduler.scheduleOnce('interval-second-note', async () => {
+        await unifiedAudioService.playNote(`${targetNote}4`, noteDuration);
+        
+        // Agendar terceira parte (ambas juntas) com espaçamento padronizado
+        const thirdPartTime = audioContext.currentTime + noteDuration + spacingBetweenNotes / 1000;
+        audioContextScheduler.scheduleOnce('interval-together-1', async () => {
+          await unifiedAudioService.playNote(`${rootNote}4`, noteDuration);
+          
+          // Agendar segunda nota juntas (delay mínimo para formar intervalo)
+          audioContextScheduler.scheduleOnce('interval-together-2', async () => {
+            await unifiedAudioService.playNote(`${targetNote}4`, noteDuration);
+          }, 0.08);
+        }, thirdPartTime - audioContext.currentTime);
+      }, secondNoteTime - audioContext.currentTime);
       
     } catch (error) {
       console.error('Erro ao tocar intervalo:', error);
     } finally {
       setIsPlaying(false);
+      // Remover contexto e marcar como não tocando
+      import('@/services/AudioPriorityManager').then(({ audioPriorityManager }) => {
+        audioPriorityManager.setTheoryPlaying(false);
+        audioPriorityManager.setContext(null);
+      });
     }
   };
 

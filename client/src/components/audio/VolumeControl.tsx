@@ -1,31 +1,103 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Volume2, VolumeX, Volume1 } from 'lucide-react';
 import { getAudioMixer } from '../../audio';
+import { useAudioSettingsStore } from '@/stores/useAudioSettingsStore';
+import { toast } from 'sonner';
 
 interface VolumeControlProps {
   className?: string;
 }
 
 export function VolumeControl({ className = '' }: VolumeControlProps) {
-  const [volume, setVolume] = useState(80);
+  // Usar store global para volume (persistido)
+  const { masterVolume, setMasterVolume } = useAudioSettingsStore();
+  const volume = Math.round(masterVolume * 100); // Converter para 0-100
+  
+  // Estado local para mute e slider
   const [isMuted, setIsMuted] = useState(false);
   const [showSlider, setShowSlider] = useState(false);
+  const userInitiatedChangeRef = React.useRef(false);
 
-  const handleVolumeChange = useCallback((newVolume: number) => {
-    setVolume(newVolume);
+  // Sincronizar AudioMixer com store ao montar e quando volume mudar
+  useEffect(() => {
     const mixer = getAudioMixer();
     if (mixer) {
-      mixer.setMasterVolume(newVolume / 100);
+      // Sincronizar volume do store com AudioMixer
+      mixer.setMasterVolume(masterVolume);
     }
-  }, []);
+  }, [masterVolume]);
+
+  // Sincronizar estado de mute apenas ao montar
+  useEffect(() => {
+    const mixer = getAudioMixer();
+    if (mixer) {
+      const mixerIsMuted = mixer.getIsMuted();
+      setIsMuted(mixerIsMuted);
+    }
+  }, []); // Apenas ao montar
+
+  const handleVolumeChange = useCallback((newVolume: number) => {
+    const volumeNormalized = newVolume / 100; // Converter para 0-1
+    
+    // Marcar como mudança iniciada pelo usuário
+    userInitiatedChangeRef.current = true;
+    
+    // Atualizar store global (persistido automaticamente)
+    setMasterVolume(volumeNormalized);
+    
+    // Atualizar AudioMixer imediatamente
+    const mixer = getAudioMixer();
+    if (mixer) {
+      mixer.setMasterVolume(volumeNormalized);
+    }
+    
+    // Feedback visual imediato
+    toast.success(`${newVolume}%`, {
+      duration: 500,
+      position: 'top-center',
+      style: {
+        background: 'rgba(0, 0, 0, 0.8)',
+        color: 'white',
+        fontSize: '14px',
+        padding: '8px 16px',
+      },
+    });
+    
+    // Se estava mutado e aumentou volume, desmutar
+    if (isMuted && newVolume > 0) {
+      setIsMuted(false);
+      const mixer = getAudioMixer();
+      if (mixer) {
+        mixer.unmute();
+      }
+    }
+    
+    // Reset flag após pequeno delay
+    setTimeout(() => {
+      userInitiatedChangeRef.current = false;
+    }, 100);
+  }, [setMasterVolume, isMuted]);
 
   const handleMuteToggle = useCallback(() => {
     const mixer = getAudioMixer();
     if (mixer) {
       mixer.toggleMute();
-      setIsMuted(!isMuted);
+      const newMutedState = mixer.getIsMuted();
+      setIsMuted(newMutedState);
+      
+      // Feedback visual
+      toast.info(newMutedState ? 'Mudo' : 'Som ativado', {
+        duration: 500,
+        position: 'top-center',
+        style: {
+          background: 'rgba(0, 0, 0, 0.8)',
+          color: 'white',
+          fontSize: '14px',
+          padding: '8px 16px',
+        },
+      });
     }
-  }, [isMuted]);
+  }, []);
 
   const getVolumeIcon = () => {
     if (isMuted || volume === 0) return <VolumeX className="w-5 h-5" />;

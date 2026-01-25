@@ -66,6 +66,11 @@ export function SpacedRepetitionReview() {
 
   const handleConfirm = () => {
     if (currentItem && selectedQuality !== null) {
+      // Feedback sonoro de confirmação
+      import('@/services/ActionFeedbackService').then(({ actionFeedbackService }) => {
+        actionFeedbackService.playActionFeedback('confirmation');
+      });
+      
       processReview(currentItem.contentId, currentItem.contentType, selectedQuality);
       
       // Feedback baseado na qualidade

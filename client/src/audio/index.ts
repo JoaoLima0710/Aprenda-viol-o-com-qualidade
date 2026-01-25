@@ -32,11 +32,12 @@ export async function initializeAudioSystem(): Promise<void> {
   
   const sampleLoader = SampleLoader.getInstance();
   
-      audioMixerInstance = new AudioMixer();
-      await audioMixerInstance.initialize();
-      
-      // Criar instância única do AudioBus
-      audioBusInstance = new AudioBus();
+  if (!audioMixerInstance) {
+    audioMixerInstance = new AudioMixer();
+    await audioMixerInstance.initialize();
+    
+    // Criar instância única do AudioBus
+    audioBusInstance = new AudioBus();
       
       // Pré-carregar samples essenciais em background
       // Usar fallback para navegadores que não suportam requestIdleCallback

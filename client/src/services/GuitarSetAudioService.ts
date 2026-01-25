@@ -285,7 +285,7 @@ class GuitarSetAudioService {
     }
   }
 
-  private playBuffer(buffer: AudioBuffer, startTime?: number, duration?: number): void {
+  private async playBuffer(buffer: AudioBuffer, startTime?: number, duration?: number, normalizationGain: number = 1.0): Promise<void> {
     if (!this.audioContext || !this.gainNode) {
       console.error('❌ AudioContext not initialized');
       return;
@@ -324,12 +324,17 @@ class GuitarSetAudioService {
     const source = this.audioContext.createBufferSource();
     source.buffer = buffer;
     
+    // Criar gain para normalização de volume (aplicado antes do envelope)
+    const normalizationGainNode = this.audioContext.createGain();
+    normalizationGainNode.gain.value = normalizationGain;
+    
     // Criar um GainNode separado para envelope ADSR (melhor controle de volume)
     // Cada fonte tem seu próprio envelope para evitar interferência
     const envelopeGain = this.audioContext.createGain();
     
-    // Conectar: source -> envelopeGain -> gainNode -> destination
-    source.connect(envelopeGain);
+    // Conectar: source -> normalizationGain -> envelopeGain -> gainNode -> destination
+    source.connect(normalizationGainNode);
+    normalizationGainNode.connect(envelopeGain);
     envelopeGain.connect(this.gainNode);
 
     // Track active sources for cleanup
@@ -339,6 +344,7 @@ class GuitarSetAudioService {
       // Limpar quando a fonte terminar
       try {
         source.disconnect();
+        normalizationGainNode.disconnect();
         envelopeGain.disconnect();
       } catch (e) {
         // Pode já estar desconectado
@@ -364,43 +370,54 @@ class GuitarSetAudioService {
       actualDuration = bufferDuration;
     }
 
-    // Envelope ultra-simplificado para notas individuais
-    // Mínima complexidade para evitar qualquer sobreposição ou som de acorde
-    const attackTime = 0.003; // 3ms - ataque quase instantâneo
-    const releaseTime = Math.min(0.2, actualDuration * 0.06); // Release suave, máximo 200ms
+    // Aplicar envelope ADSR padrão se normalização foi aplicada (indica que é acorde)
+    // Caso contrário, usar envelope simplificado para notas individuais
+    const isChord = normalizationGain !== 1.0;
     
-    const envelopeStart = actualStartTime;
-    const envelopePeak = envelopeStart + attackTime;
-    const envelopeEnd = envelopeStart + actualDuration;
-    const envelopeReleaseStart = Math.max(envelopePeak, envelopeEnd - releaseTime);
-
     try {
-      // Envelope mínimo: Ataque quase instantâneo + Sustain máximo + Release suave
-      // Garante que cada nota seja PERFEITAMENTE clara, única e identificável
-      // Sem qualquer complexidade que possa causar sobreposição
-      
-      // Iniciar em 0
-      envelopeGain.gain.setValueAtTime(0, envelopeStart);
-      
-      // Ataque quase instantâneo para volume máximo
-      envelopeGain.gain.linearRampToValueAtTime(1.0, envelopePeak);
-      
-      // Sustain - volume máximo durante quase toda a nota
-      if (envelopeReleaseStart > envelopePeak) {
-        envelopeGain.gain.setValueAtTime(1.0, envelopeReleaseStart);
+      if (isChord) {
+        // Envelope ADSR padrão para acordes (garante consistência)
+        const { applyADSREnvelope } = await import('./ChordNormalizer');
+        applyADSREnvelope(envelopeGain, this.audioContext, actualStartTime, actualDuration);
+      } else {
+        // Envelope ultra-simplificado para notas individuais
+        // Mínima complexidade para evitar qualquer sobreposição ou som de acorde
+        const attackTime = 0.003; // 3ms - ataque quase instantâneo
+        const releaseTime = Math.min(0.2, actualDuration * 0.06); // Release suave, máximo 200ms
+        
+        const envelopeStart = actualStartTime;
+        const envelopePeak = envelopeStart + attackTime;
+        const envelopeEnd = envelopeStart + actualDuration;
+        const envelopeReleaseStart = Math.max(envelopePeak, envelopeEnd - releaseTime);
+        
+        // Envelope mínimo: Ataque quase instantâneo + Sustain máximo + Release suave
+        // Garante que cada nota seja PERFEITAMENTE clara, única e identificável
+        // Sem qualquer complexidade que possa causar sobreposição
+        
+        // Iniciar em 0
+        envelopeGain.gain.setValueAtTime(0, envelopeStart);
+        
+        // Ataque quase instantâneo para volume máximo
+        envelopeGain.gain.linearRampToValueAtTime(1.0, envelopePeak);
+        
+        // Sustain - volume máximo durante quase toda a nota
+        if (envelopeReleaseStart > envelopePeak) {
+          envelopeGain.gain.setValueAtTime(1.0, envelopeReleaseStart);
+        }
+        
+        // Release suave apenas no final - fade out natural
+        envelopeGain.gain.linearRampToValueAtTime(0, envelopeEnd);
       }
-      
-      // Release suave apenas no final - fade out natural
-      envelopeGain.gain.linearRampToValueAtTime(0, envelopeEnd);
 
       // Iniciar a fonte
       source.start(actualStartTime);
       
       // Parar a fonte no final exato da duração
       // O envelope já fez o fade out, então não haverá click
+      const envelopeEnd = actualStartTime + actualDuration;
       source.stop(envelopeEnd);
       
-      console.log(`🎵 Playing buffer: start=${actualStartTime.toFixed(3)}, end=${envelopeEnd.toFixed(3)}, duration=${actualDuration.toFixed(3)}`);
+      console.log(`🎵 Playing buffer: start=${actualStartTime.toFixed(3)}, end=${envelopeEnd.toFixed(3)}, duration=${actualDuration.toFixed(3)}, normalized=${isChord}`);
       
     } catch (error) {
       console.error('❌ Error starting audio source:', error);
@@ -486,12 +503,18 @@ class GuitarSetAudioService {
 
     console.log('🎵 Buffer loaded:', buffer.duration.toFixed(2), 's, channels:', buffer.numberOfChannels);
 
+    // Normalizar volume do buffer usando ChordNormalizer
+    // Isso garante que todos os acordes tenham loudness consistente
+    const { chordNormalizer } = await import('./ChordNormalizer');
+    const normalizationGain = chordNormalizer.analyzeAndNormalize(buffer, normalizedChord);
+    
     // Para tablets: usar duração completa do sample
     const fullDuration = duration || buffer.duration;
     
-    // Play the buffer with full duration to prevent cutting off
-    this.playBuffer(buffer, undefined, fullDuration);
-    console.log('✅ Chord played:', normalizedChord, 'duration:', fullDuration.toFixed(2), 's');
+    // Play the buffer with normalized gain and full duration
+    // O envelope ADSR será aplicado automaticamente no playBuffer quando normalizationGain !== 1.0
+    await this.playBuffer(buffer, undefined, fullDuration, normalizationGain);
+    console.log(`✅ Chord played: ${normalizedChord}, duration: ${fullDuration.toFixed(2)}s, gain: ${normalizationGain.toFixed(3)}`);
   }
 
   /**
@@ -603,7 +626,7 @@ class GuitarSetAudioService {
         }
         
         const noteStartTime = startTime + (i * duration);
-        this.playBuffer(buffer, noteStartTime, duration);
+        await this.playBuffer(buffer, noteStartTime, duration);
       } else {
         console.warn(`⚠️ Note sample not available: ${noteWithOctave}`);
       }
@@ -681,7 +704,7 @@ class GuitarSetAudioService {
       await new Promise(resolve => setTimeout(resolve, 50));
     }
     
-    this.playBuffer(buffer, undefined, noteDuration);
+    await this.playBuffer(buffer, undefined, noteDuration);
     console.log('✅ Note played:', note, 'duration:', noteDuration.toFixed(2), 's', 'active sources:', this.activeSources.size);
   }
 

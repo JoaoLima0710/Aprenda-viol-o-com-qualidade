@@ -48,6 +48,11 @@ export function useAudio(): UseAudioReturn {
     setError(null);
 
     try {
+      // CRITICAL: Mark user interaction BEFORE initializing
+      // This ensures AudioContext.resume() can be called
+      const { unifiedAudioService } = await import('../services/UnifiedAudioService');
+      unifiedAudioService.markUserInteraction();
+      
       await initializeAudioSystem();
       setIsReady(true);
     } catch (err) {

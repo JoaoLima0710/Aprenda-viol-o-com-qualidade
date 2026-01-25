@@ -9,6 +9,8 @@ import { Music, Play, Pause, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
+import { unifiedAudioService } from '@/services/UnifiedAudioService';
+import { rhythmScheduler } from '@/services/RhythmScheduler';
 
 interface VisualMetronomeProps {
   bpm?: number;
@@ -29,12 +31,12 @@ export function VisualMetronome({
   const [beatProgress, setBeatProgress] = useState(0);
   const [volume, setVolume] = useState(0.7);
   
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
   const startTimeRef = useRef<number>(0);
   const beatCountRef = useRef<number>(0);
+  const schedulerIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -52,12 +54,20 @@ export function VisualMetronome({
     if (isPlaying) return;
 
     try {
-      // Create AudioContext if needed
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContext();
-      }
+      // Ensure audio service is initialized
+      await unifiedAudioService.ensureInitialized();
       
-      const audioContext = audioContextRef.current;
+      // Get AudioContext from UnifiedAudioService (fonte de verdade)
+      const audioContext = unifiedAudioService.getAudioContext();
+      
+      if (!audioContext) {
+        console.error('❌ VisualMetronome: No AudioContext available');
+        setIsPlaying(false);
+        return;
+      }
+
+      // Use the AudioContext from UnifiedAudioService
+      audioContextRef.current = audioContext;
       
       // Resume if suspended
       if (audioContext.state === 'suspended') {
@@ -71,18 +81,21 @@ export function VisualMetronome({
         gainNodeRef.current.connect(audioContext.destination);
       }
 
+      // Initialize rhythm scheduler with lookahead
+      await rhythmScheduler.initialize();
+      
       setIsPlaying(true);
       startTimeRef.current = audioContext.currentTime;
       beatCountRef.current = 0;
       setCurrentBeat(0);
       setBeatProgress(0);
 
-      // Calculate interval in milliseconds
-      const beatInterval = (60 / currentBPM) * 1000;
+      // Calculate interval in seconds (AudioContext time)
+      const beatIntervalSeconds = 60 / currentBPM;
       const [beatsPerMeasure, noteValue] = timeSignature;
       
-      // Play click sound
-      const playClick = (beat: number) => {
+      // Play click sound with lookahead scheduling
+      const playClick = (beat: number, audioTime: number) => {
         if (!audioContext || !gainNodeRef.current) return;
 
         const isDownbeat = beat === 0;
@@ -95,40 +108,40 @@ export function VisualMetronome({
         oscillator.type = 'sine';
         oscillator.frequency.value = frequency;
         
-        gain.gain.setValueAtTime(isDownbeat ? 0.3 : 0.2, audioContext.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+        gain.gain.setValueAtTime(isDownbeat ? 0.3 : 0.2, audioTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioTime + duration);
         
         oscillator.connect(gain);
         gain.connect(gainNodeRef.current);
         
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + duration);
+        oscillator.start(audioTime);
+        oscillator.stop(audioTime + duration);
       };
 
-      // Visual update loop
-      const updateVisual = () => {
-        const now = Date.now();
-        const elapsed = now - startTimeRef.current;
-        const beatIntervalMs = (60 / currentBPM) * 1000;
-        const currentBeatInMeasure = Math.floor((elapsed / beatIntervalMs) % beatsPerMeasure);
-        const progress = ((elapsed % beatIntervalMs) / beatIntervalMs) * 100;
+      // Visual update callback com compensação de latência
+      let beatCount = 0;
+      const updateVisual = (audioTime: number, visualTime: number, beat: number) => {
+        // Usar visualTime compensado para feedback visual
+        const elapsed = visualTime - startTimeRef.current;
+        const currentBeatInMeasure = beat % beatsPerMeasure;
+        const beatProgress = ((elapsed % beatIntervalSeconds) / beatIntervalSeconds) * 100;
 
         setCurrentBeat(currentBeatInMeasure);
-        setBeatProgress(progress);
+        setBeatProgress(Math.max(0, Math.min(100, beatProgress)));
 
-        // Play click on beat
-        const beatNumber = Math.floor(elapsed / beatIntervalMs);
-        if (beatNumber !== beatCountRef.current) {
-          beatCountRef.current = beatNumber;
-          playClick(currentBeatInMeasure);
-        }
+        // Play click usando audioTime (preciso)
+        playClick(currentBeatInMeasure, audioTime);
       };
 
-      // Start interval
-      intervalRef.current = setInterval(updateVisual, 16); // ~60 FPS
+      // Usar RhythmScheduler com lookahead para eventos repetitivos
+      const schedulerId = rhythmScheduler.scheduleRepeating(
+        'beat',
+        beatIntervalSeconds,
+        updateVisual,
+        0 // Começar imediatamente
+      );
       
-      // Play first click
-      playClick(0);
+      schedulerIdRef.current = schedulerId;
     } catch (error) {
       console.error('Error starting metronome:', error);
       setIsPlaying(false);
@@ -136,9 +149,10 @@ export function VisualMetronome({
   };
 
   const stop = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    // Cancel scheduled events using RhythmScheduler
+    if (schedulerIdRef.current) {
+      rhythmScheduler.cancelEvent(schedulerIdRef.current);
+      schedulerIdRef.current = null;
     }
     
     if (oscillatorRef.current) {
@@ -155,10 +169,13 @@ export function VisualMetronome({
     const bpmValue = newBPM[0];
     setCurrentBPM(bpmValue);
     
-    // Restart if playing
+    // Restart if playing - usar RhythmScheduler com lookahead
     if (isPlaying) {
       stop();
-      setTimeout(() => start(), 100);
+      // Usar rhythm scheduler para agendar restart com compensação
+      rhythmScheduler.scheduleEvent('click', 0.1, () => {
+        start();
+      });
     }
   };
 

@@ -39,7 +39,9 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { metronomeService } from '@/services/MetronomeService';
 import { unifiedAudioService } from '@/services/UnifiedAudioService';
+import { feedbackSoundService } from '@/services/FeedbackSoundService';
 import { useGamificationStore } from '@/stores/useGamificationStore';
+import { usePracticeMetricsStore } from '@/stores/usePracticeMetricsStore';
 import { HARMONIC_PROGRESSIONS, type HarmonicProgression } from '@/data/progressions';
 import { chords, type Chord } from '@/data/chords';
 
@@ -94,8 +96,10 @@ export function ChordProgressionPractice({
   const actualChangeTimeRef = useRef<number>(0);
   const beatCallbackRef = useRef<((beat: number, isDownbeat: boolean) => void) | null>(null);
   const timingFeedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionStartTimeRef = useRef<number>(0);
   
   const { addXP } = useGamificationStore();
+  const { recordSession } = usePracticeMetricsStore();
 
   // Inicializar progressão
   useEffect(() => {
@@ -203,18 +207,53 @@ export function ChordProgressionPractice({
       addXP(5);
     } else if (timingDiff < 0) {
       // Adiantou
+      const absDiff = Math.abs(timingDiff);
+      let message = '';
+      let suggestion = '';
+      
+      if (absDiff < 100) {
+        message = `Adiantou ${Math.round(absDiff)}ms - quase perfeito!`;
+        suggestion = 'Aguarde um pouquinho mais antes de trocar o acorde. Você está quase lá!';
+      } else if (absDiff < 200) {
+        message = `Adiantou ${Math.round(absDiff)}ms - está trocando cedo demais`;
+        suggestion = 'Aguarde o tempo do metrônomo. Conte mentalmente: "1, 2, 3, 4" e troque no "1" do próximo compasso.';
+      } else {
+        message = `Adiantou ${Math.round(absDiff)}ms - troca muito antecipada`;
+        suggestion = 'Você está trocando o acorde antes do tempo. Pratique contar os tempos em voz alta e trocar apenas no primeiro tempo do compasso.';
+      }
+      
       feedback = {
         type: 'early',
-        message: `Adiantou ${Math.abs(timingDiff)}ms. Aguarde o tempo!`,
+        message: `${message} ${suggestion}`,
       };
       setConsecutiveSuccesses(0);
+      
+      // Feedback sonoro de erro de tempo
+      feedbackSoundService.playFeedback('error_timing', 0.12);
     } else {
       // Atrasou
+      let message = '';
+      let suggestion = '';
+      
+      if (timingDiff < 100) {
+        message = `Atrasou ${Math.round(timingDiff)}ms - quase perfeito!`;
+        suggestion = 'Antecipe a troca um pouquinho mais. Você está quase lá!';
+      } else if (timingDiff < 200) {
+        message = `Atrasou ${Math.round(timingDiff)}ms - está trocando tarde`;
+        suggestion = 'Antecipe a troca de acorde. Comece a mover os dedos um pouco antes do tempo para trocar no momento certo.';
+      } else {
+        message = `Atrasou ${Math.round(timingDiff)}ms - troca muito atrasada`;
+        suggestion = 'Você está trocando o acorde depois do tempo. Pratique preparar os dedos antes do tempo e trocar no primeiro tempo do compasso.';
+      }
+      
       feedback = {
         type: 'late',
-        message: `Atrasou ${timingDiff}ms. Antecipe a troca!`,
+        message: `${message} ${suggestion}`,
       };
       setConsecutiveSuccesses(0);
+      
+      // Feedback sonoro de erro de tempo
+      feedbackSoundService.playFeedback('error_timing', 0.12);
     }
 
     setTimingFeedback(feedback);
@@ -233,6 +272,18 @@ export function ChordProgressionPractice({
     if (!selectedProgression) return;
 
     try {
+      // Registrar sessão de lifecycle
+      const { audioLifecycleManager } = await import('@/services/AudioLifecycleManager');
+      audioLifecycleManager.startSession('training', 'ChordProgressionPractice', true);
+      
+      // Definir contexto de treino (prioridade máxima)
+      const { audioPriorityManager } = await import('@/services/AudioPriorityManager');
+      audioPriorityManager.setContext('training');
+      
+      // Feedback sonoro de início de treino
+      const { actionFeedbackService } = await import('@/services/ActionFeedbackService');
+      actionFeedbackService.playActionFeedback('training_start');
+      
       await metronomeService.initialize();
       await metronomeService.start(bpm, '4/4');
       setIsPlaying(true);
@@ -245,18 +296,53 @@ export function ChordProgressionPractice({
       setTimingHistory([]);
       setCurrentChord(selectedProgression.chords[0]);
       setNextChord(selectedProgression.chords[1] || selectedProgression.chords[0]);
+      sessionStartTimeRef.current = Date.now();
     } catch (error) {
       console.error('Erro ao iniciar metrônomo:', error);
     }
   };
 
-  // Pausar prática
+  // Pausar prática (registrar métricas se houver tentativas)
   const handlePause = () => {
+    // Pausar sessão de lifecycle
+    import('@/services/AudioLifecycleManager').then(({ audioLifecycleManager }) => {
+      audioLifecycleManager.pauseSession();
+    });
+    
+    // Remover contexto de treino
+    import('@/services/AudioPriorityManager').then(({ audioPriorityManager }) => {
+      audioPriorityManager.setContext(null);
+    });
+    
     metronomeService.stop();
     setIsPlaying(false);
+    
+    // Registrar sessão se houver tentativas
+    if (totalAttempts > 0 && selectedProgression) {
+      const duration = Math.round((Date.now() - sessionStartTimeRef.current) / 1000);
+      const accuracy = Math.round((successfulChanges / totalAttempts) * 100);
+      const currentConsistency = Math.round(consistency * 100);
+      
+      recordSession({
+        type: 'chord_progression',
+        duration,
+        accuracy,
+        attempts: totalAttempts,
+        correct: successfulChanges,
+        consistency: currentConsistency,
+        metadata: {
+          progressionName: selectedProgression.name,
+          bpm,
+        },
+      });
+      
+      if (onComplete) {
+        onComplete(accuracy, bpm);
+      }
+    }
   };
 
-  // Parar e resetar
+  // Parar e resetar (com variação controlada - mantém progressão mas reseta estado)
   const handleReset = () => {
     metronomeService.stop();
     setIsPlaying(false);
@@ -268,6 +354,7 @@ export function ChordProgressionPractice({
     setSuccessfulChanges(0);
     setTimingHistory([]);
     setConsistency(0);
+    setTimingFeedback({ type: null, message: '' });
     if (selectedProgression) {
       const config = BPM_PROGRESSION[selectedProgression.difficulty];
       setBpm(config.start);
@@ -402,38 +489,66 @@ export function ChordProgressionPractice({
         <Progress value={progress} className="h-2" />
       </div>
 
-      {/* Feedback de timing */}
+      {/* Feedback de timing explicativo */}
       <AnimatePresence>
         {timingFeedback.type && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className={`mb-4 p-3 rounded-lg flex items-center justify-center gap-2 ${
+            className={`mb-4 p-4 rounded-lg border-2 ${
               timingFeedback.type === 'perfect'
-                ? 'bg-green-500/20 border border-green-500/50'
+                ? 'bg-green-500/10 border-green-500/50'
                 : timingFeedback.type === 'early'
-                ? 'bg-yellow-500/20 border border-yellow-500/50'
-                : 'bg-red-500/20 border border-red-500/50'
+                ? 'bg-yellow-500/10 border-yellow-500/50'
+                : 'bg-red-500/10 border-red-500/50'
             }`}
           >
-            {timingFeedback.type === 'perfect' && <CheckCircle2 className="w-5 h-5 text-green-400" />}
-            {timingFeedback.type === 'early' && <TrendingUp className="w-5 h-5 text-yellow-400" />}
-            {timingFeedback.type === 'late' && <TrendingDown className="w-5 h-5 text-red-400" />}
-            <span
-              className={`text-sm font-semibold ${
-                timingFeedback.type === 'perfect'
-                  ? 'text-green-400'
-                  : timingFeedback.type === 'early'
-                  ? 'text-yellow-400'
-                  : 'text-red-400'
-              }`}
-            >
-              {timingFeedback.message}
-            </span>
+            <div className="flex items-start gap-3">
+              {timingFeedback.type === 'perfect' && <CheckCircle2 className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />}
+              {timingFeedback.type === 'early' && <TrendingUp className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />}
+              {timingFeedback.type === 'late' && <TrendingDown className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />}
+              <div className="flex-1">
+                <p
+                  className={`text-sm font-semibold mb-1 ${
+                    timingFeedback.type === 'perfect'
+                      ? 'text-green-400'
+                      : timingFeedback.type === 'early'
+                      ? 'text-yellow-400'
+                      : 'text-red-400'
+                  }`}
+                >
+                  {timingFeedback.type === 'perfect' ? 'Timing Perfeito!' : timingFeedback.type === 'early' ? 'Troca Antecipada' : 'Troca Atrasada'}
+                </p>
+                <p className="text-sm text-gray-300">{timingFeedback.message}</p>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Meta Clara do Exercício */}
+      {selectedProgression && (
+        <div className="mb-6 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
+          <div className="flex items-center gap-2 mb-2">
+            <Target className="w-5 h-5 text-blue-400" />
+            <h4 className="text-sm font-bold text-white">Meta do Exercício</h4>
+          </div>
+          <div className="space-y-2 text-sm text-gray-300">
+            <p>
+              <strong className="text-white">Objetivo:</strong> Trocar acordes no tempo certo (dentro de ±{TIMING_TOLERANCE_MS}ms).
+            </p>
+            <p>
+              <strong className="text-white">Para aumentar BPM:</strong> Você precisa de{' '}
+              <strong className="text-green-400">{config.requiredSuccesses} trocas consecutivas perfeitas</strong> e{' '}
+              <strong className="text-cyan-400">{Math.round(config.minConsistency * 100)}% de consistência</strong>.
+            </p>
+            <p className="text-xs text-gray-400 mt-2">
+              💡 <strong>Dica:</strong> Prepare os dedos antes do tempo. Antecipe a troca para que ela aconteça exatamente no primeiro tempo do compasso!
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Status de BPM */}
       <div className="mb-6 flex items-center justify-center gap-2">

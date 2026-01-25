@@ -4,12 +4,14 @@
  */
 
 import { useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, CheckCircle2, XCircle, RotateCcw, Music, Info } from 'lucide-react';
+import { Play, CheckCircle2, XCircle, RotateCcw, Music, Info, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAudio } from '@/hooks/useAudio';
 import { useGamificationStore } from '@/stores/useGamificationStore';
+import { unifiedAudioService } from '@/services/UnifiedAudioService';
 
 const CHROMATIC_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -143,18 +145,53 @@ export function ChordBuilder() {
   };
 
   const { playNotes } = useAudio();
+  const playbackAbortRef = React.useRef<AbortController | null>(null);
+
+  // Parar áudio quando componente desmontar ou notas mudarem
+  React.useEffect(() => {
+    return () => {
+      if (playbackAbortRef.current) {
+        playbackAbortRef.current.abort();
+      }
+      try {
+        unifiedAudioService.stopAll();
+      } catch (error) {
+        // Ignorar erros no cleanup
+      }
+    };
+  }, [selectedNotes]);
+
   const handlePlayChord = async () => {
     if (selectedNotes.length === 0) return;
+    
+    // Se já está tocando, parar
+    if (isPlaying) {
+      if (playbackAbortRef.current) {
+        playbackAbortRef.current.abort();
+      }
+      await unifiedAudioService.stopAll();
+      setIsPlaying(false);
+      return;
+    }
+
     setIsPlaying(true);
+    playbackAbortRef.current = new AbortController();
+    
     try {
+      await unifiedAudioService.ensureInitialized();
       for (const note of selectedNotes) {
+        if (playbackAbortRef.current?.signal.aborted) break;
         await playNotes([`${note.note}${note.octave}`], { duration: 0.3 });
+        if (playbackAbortRef.current?.signal.aborted) break;
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     } catch (error) {
       console.error('Erro ao tocar acorde:', error);
     } finally {
-      setIsPlaying(false);
+      if (!playbackAbortRef.current?.signal.aborted) {
+        setIsPlaying(false);
+      }
+      playbackAbortRef.current = null;
     }
   };
 
@@ -305,12 +342,23 @@ export function ChordBuilder() {
         
         <Button
           onClick={handlePlayChord}
-          disabled={selectedNotes.length === 0 || isPlaying}
+          disabled={selectedNotes.length === 0}
           variant="outline"
-          className="border-white/20 text-white hover:bg-white/10"
+          className={`border-white/20 text-white hover:bg-white/10 ${
+            isPlaying ? 'bg-red-500/20 border-red-500/50' : ''
+          }`}
         >
-          <Play className="w-4 h-4 mr-2" />
-          Ouvir
+          {isPlaying ? (
+            <>
+              <VolumeX className="w-4 h-4 mr-2" />
+              Parar
+            </>
+          ) : (
+            <>
+              <Play className="w-4 h-4 mr-2" />
+              Ouvir
+            </>
+          )}
         </Button>
         
         <Button
