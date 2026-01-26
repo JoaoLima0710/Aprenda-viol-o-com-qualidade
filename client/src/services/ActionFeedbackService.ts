@@ -168,7 +168,7 @@ class ActionFeedbackService {
   /**
    * Verifica se feedback está habilitado
    */
-  isEnabled(): boolean {
+  getIsEnabled(): boolean {
     return this.isEnabled;
   }
 

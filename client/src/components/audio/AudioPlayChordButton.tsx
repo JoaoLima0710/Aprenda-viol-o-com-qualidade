@@ -14,7 +14,7 @@ interface AudioPlayChordButtonProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-export default function AudioPlayChordButton({
+function AudioPlayChordButton({
   chordNotes,
   chordName,
   duration = 0.5,
@@ -170,3 +170,5 @@ export default function AudioPlayChordButton({
 
 // Named export para compatibilidade
 export const ChordPlayButton = AudioPlayChordButton;
+export { AudioPlayChordButton };
+export default AudioPlayChordButton;

@@ -37,7 +37,6 @@ class AudioManager {
   private mobileOptimizations = false;
   private hasUserInteracted = false; // Flag para rastrear interação explícita do usuário
   private hasPlayedActivationRitual = false; // Flag para garantir que o ritual toca apenas uma vez por sessão
-  private hasPlayedActivationRitual = false; // Flag para garantir que o ritual toca apenas uma vez por sessão
 
   constructor() {
     // Detect mobile device for optimizations
@@ -1094,12 +1093,6 @@ class AudioManager {
       console.error('[UnifiedAudioService] Erro no fade-out, usando stop abrupto:', error);
       // Fallback para stop abrupto
       this.stopAll();
-    }
-  }
-
-      console.log('✅ All audio stopped');
-    } catch (error) {
-      console.error('❌ Error stopping audio:', error);
     }
   }
 

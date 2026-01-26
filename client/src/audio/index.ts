@@ -1,4 +1,4 @@
-// Exportar todas as classes do módulo de áudio
+// client/src/audio/index.ts
 
 export { default as AudioEngine } from './AudioEngine';
 export { default as SampleLoader } from './SampleLoader';
@@ -8,19 +8,14 @@ export { default as ScalePlayer } from './ScalePlayer';
 export { default as PitchDetector } from './PitchDetector';
 export { default as Tuner } from './TunerEngine';
 export { default as AudioMixer } from './AudioMixer';
-export { default as AudioBus } from './AudioBus';
 
-// Exportar tipos
 export * from './types';
 
-// Instâncias singleton para uso global
 import AudioEngine from './AudioEngine';
 import SampleLoader from './SampleLoader';
 import AudioMixer from './AudioMixer';
-import AudioBus from './AudioBus';
 
 let audioMixerInstance: AudioMixer | null = null;
-let audioBusInstance: AudioBus | null = null;
 
 /**
  * Inicializa todo o sistema de áudio
@@ -29,31 +24,23 @@ let audioBusInstance: AudioBus | null = null;
 export async function initializeAudioSystem(): Promise<void> {
   const audioEngine = AudioEngine.getInstance();
   await audioEngine.initialize();
-  
+
   const sampleLoader = SampleLoader.getInstance();
-  
-  if (!audioMixerInstance) {
-    audioMixerInstance = new AudioMixer();
-    await audioMixerInstance.initialize();
-    
-    // Criar instância única do AudioBus
+
+  audioMixerInstance = new AudioMixer();
+  await audioMixerInstance.initialize();
+
+  // Criar instância única do AudioBus
+  if (!audioBusInstance) {
     audioBusInstance = new AudioBus();
-      
-      // Pré-carregar samples essenciais em background
-      // Usar fallback para navegadores que não suportam requestIdleCallback
-      const schedulePreload = () => {
-        sampleLoader.preloadChordSamples().catch(console.warn);
-      };
-      
-      if (typeof requestIdleCallback !== 'undefined') {
-        requestIdleCallback(schedulePreload);
-      } else {
-        // Fallback: usar setTimeout para não bloquear a UI
-        setTimeout(schedulePreload, 1000);
-      }
-      
-      console.log('[AudioSystem] Sistema de áudio inicializado');
-    }
+  }
+
+  requestIdleCallback(() => {
+    sampleLoader.preloadChordSamples().catch(console.warn);
+  });
+
+  console.log('[AudioSystem] Sistema de áudio inicializado');
+}
 
 /**
  * Retorna a instância do mixer
@@ -72,6 +59,13 @@ export function isAudioReady(): boolean {
 /**
  * Retorna a instância do AudioBus
  */
+import AudioBus from './AudioBus';
+
+let audioBusInstance: AudioBus | null = null;
+
 export function getAudioBus(): AudioBus | null {
+  if (!audioBusInstance) {
+    audioBusInstance = new AudioBus();
+  }
   return audioBusInstance;
 }

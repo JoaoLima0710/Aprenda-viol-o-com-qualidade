@@ -231,7 +231,7 @@ class GamificationSoundService {
   /**
    * Verifica se está habilitado
    */
-  isEnabled(): boolean {
+  getIsEnabled(): boolean {
     return this.isEnabled;
   }
 
