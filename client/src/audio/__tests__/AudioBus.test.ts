@@ -409,15 +409,34 @@ describe('AudioBus', () => {
     });
 
     it('deve conectar osc -> envelopeGain -> volumeGain -> channelGain', async () => {
-      const mockOsc = createMockOscillatorNode();
-      const mockEnvelopeGain = createMockGainNode();
-      const mockVolumeGain = createMockGainNode();
-      const mockChannelGain = mockChordsChannel; // Usar o canal mockado
+      // Grafo de conexões
+      const connections: Array<{ from: any, to: any }> = [];
 
-      vi.spyOn(mockContext, 'createOscillator').mockReturnValue(mockOsc);
-      vi.spyOn(mockContext, 'createGain')
-        .mockReturnValueOnce(mockEnvelopeGain)
-        .mockReturnValueOnce(mockVolumeGain);
+      // Intercepta todas as conexões
+      function interceptConnect(node: any) {
+        const originalConnect = node.connect;
+        node.connect = function (dest: any) {
+          connections.push({ from: node, to: dest });
+          return originalConnect.call(this, dest);
+        };
+      }
+
+      // Mock AudioContext para interceptar todos os nodes
+      vi.spyOn(mockContext, 'createOscillator').mockImplementation(() => {
+        const osc = createMockOscillatorNode();
+        // Não atribuir __nodeType em nodes reais
+        interceptConnect(osc);
+        return osc;
+      });
+      vi.spyOn(mockContext, 'createGain').mockImplementation(() => {
+        const gain = createMockGainNode();
+        // Não atribuir __nodeType em nodes reais
+        interceptConnect(gain);
+        return gain;
+      });
+
+      // Intercepta channelGain
+      interceptConnect(mockChordsChannel);
 
       await audioBus.playOscillator({
         frequency: 440,
@@ -425,9 +444,55 @@ describe('AudioBus', () => {
         channel: 'chords',
       });
 
-      expect(mockOsc.connect).toHaveBeenCalledWith(mockEnvelopeGain);
-      expect(mockEnvelopeGain.connect).toHaveBeenCalledWith(mockVolumeGain);
-      expect(mockVolumeGain.connect).toHaveBeenCalledWith(mockChannelGain);
+      // Funções utilitárias para identificar nós
+      function isOscillator(node: any) {
+        return node.__nodeType === 'OscillatorNode' || node.frequency;
+      }
+      function isGain(node: any) {
+        return node.__nodeType === 'GainNode' || node.gain;
+      }
+      function isChannel(node: any) {
+        return node === mockChordsChannel;
+      }
+
+      // Encontra cadeia: osc -> gain -> gain -> channel
+      const oscNode = connections.find(c => isOscillator(c.from));
+      expect(oscNode).toBeDefined();
+      const firstGain = oscNode ? oscNode.to : null;
+      expect(isGain(firstGain)).toBe(true);
+
+      // O primeiro GainNode conecta a outro GainNode
+      const gainChain = connections.find(c => c.from === firstGain);
+      expect(gainChain).toBeDefined();
+      const secondGain = gainChain ? gainChain.to : null;
+      expect(isGain(secondGain)).toBe(true);
+
+      // O segundo GainNode conecta ao channelGain
+      const channelConn = connections.find(c => c.from === secondGain);
+      expect(channelConn).toBeDefined();
+      expect(channelConn).toBeDefined();
+      if (!channelConn) throw new Error('channelConn não definido');
+      expect(isChannel(channelConn.to)).toBe(true);
+
+      // Assertivas de ouro
+      // Oscillator NÃO conecta direto ao channelGain
+      expect(channelConn).toBeDefined();
+      expect(oscNode).toBeDefined();
+      if (!channelConn || !oscNode) throw new Error('channelConn ou oscNode não definido');
+      expect(channelConn.from).not.toBe(oscNode.from);
+      // Existe pelo menos DOIS GainNodes entre osc e channel
+      expect(isGain(firstGain)).toBe(true);
+      expect(isGain(secondGain)).toBe(true);
+      // channelGain é sempre o último
+      expect(channelConn).toBeDefined();
+      if (!channelConn) throw new Error('channelConn não definido');
+      expect(isChannel(channelConn.to)).toBe(true);
+      // Nenhuma conexão direta ao master
+      // (não há masterGain no mock, mas pode ser validado se existir)
+      // Falha explícita se cadeia incompleta
+      if (!oscNode || !firstGain || !secondGain || !channelConn) {
+        throw new Error('Grafo de áudio inválido: cadeia incompleta');
+      }
     });
   });
 

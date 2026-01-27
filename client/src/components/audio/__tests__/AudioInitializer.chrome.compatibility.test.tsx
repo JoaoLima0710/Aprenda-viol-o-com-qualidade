@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * Testes de compatibilidade Chrome para AudioInitializer
  * 

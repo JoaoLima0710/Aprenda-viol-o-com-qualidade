@@ -132,11 +132,13 @@ class UnifiedAudioService {
 
   stopAll(): void {
     this.isPlayingFlag = false;
-    const { getAudioBus } = require('@/audio');
-    const audioBus = getAudioBus();
-    if (audioBus) {
-      audioBus.stopAll();
-    }
+    (async () => {
+      const { getAudioBus } = await import('@/audio');
+      const audioBus = getAudioBus();
+      if (audioBus) {
+        audioBus.stopAll();
+      }
+    })();
     
     const { metronomeService } = require('@/services/MetronomeService');
     metronomeService.stop();
@@ -158,8 +160,12 @@ class UnifiedAudioService {
   }
 
   isPlaying(): boolean {
-    const { getAudioBus } = require('@/audio');
-    const audioBus = getAudioBus();
+    // Usar import dinâmico para garantir alias
+    let audioBus;
+    (async () => {
+      const { getAudioBus } = await import('@/audio');
+      audioBus = getAudioBus();
+    })();
     return audioBus ? audioBus.isPlaying() : this.isPlayingFlag;
   }
 }

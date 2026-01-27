@@ -14,6 +14,7 @@
  * Verifica que o áudio para quando o usuário navega para outra rota.
  */
 
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act, waitFor } from '@testing-library/react';
 import { Router, Route, useLocation } from 'wouter';

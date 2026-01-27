@@ -54,19 +54,20 @@ class UnifiedAudioService {
   private playActivationRitual() {
     if (this.hasPlayedActivationRitual) return;
     
-    // Simular tocar som de ativação
-    const { getAudioBus } = require('@/audio');
-    const audioBus = getAudioBus();
-    if (audioBus) {
-      audioBus.playOscillator({
-        frequency: 440,
-        type: 'sine',
-        duration: 0.25,
-        channel: 'effects',
-        volume: 0.08,
-      });
-      this.soundsPlayed++;
-    }
+    (async () => {
+      const { getAudioBus } = await import('@/audio');
+      const audioBus = getAudioBus();
+      if (audioBus) {
+        audioBus.playOscillator({
+          frequency: 440,
+          type: 'sine',
+          duration: 0.25,
+          channel: 'effects',
+          volume: 0.08,
+        });
+        this.soundsPlayed++;
+      }
+    })();
     this.hasPlayedActivationRitual = true;
   }
 

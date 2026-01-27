@@ -27,20 +27,22 @@ export function createMockAudioParam(value: number = 0): AudioParam {
 /**
  * Mock de GainNode
  */
-export function createMockGainNode(): GainNode {
+export function createMockGainNode(id?: string): GainNode {
   const gain = createMockAudioParam(1.0);
-  
-  return {
+  const node: any = {
     gain,
     connect: vi.fn(),
     disconnect: vi.fn(),
+    __nodeType: 'GainNode',
+    __id: id || Math.random().toString(36).slice(2),
     numberOfInputs: 1,
     numberOfOutputs: 1,
     channelCount: 2,
-    channelCountMode: 'max' as ChannelCountMode,
-    channelInterpretation: 'speakers' as ChannelInterpretation,
-    context: null as any,
-  } as unknown as GainNode;
+    channelCountMode: 'max',
+    channelInterpretation: 'speakers',
+    context: null,
+  };
+  return node as GainNode;
 }
 
 /**
@@ -163,6 +165,8 @@ export function createMockAudioContext(): AudioContext {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
+    // Propriedade esperada pelo AudioEngine: deve ser um GainNode
+    threshold: createMockGainNode('threshold'),
   } as unknown as AudioContext;
 
   // Simular incremento de currentTime

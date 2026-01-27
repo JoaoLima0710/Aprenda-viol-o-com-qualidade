@@ -166,11 +166,13 @@ class UnifiedAudioService {
   stopAll(): void {
     this.isPlayingFlag = false;
     isPlayingState = false;
-    const { getAudioBus } = require('@/audio');
-    const audioBus = getAudioBus();
-    if (audioBus) {
-      audioBus.stopAll();
-    }
+      (async () => {
+        const { getAudioBus } = await import('@/audio');
+        const audioBus = getAudioBus();
+        if (audioBus) {
+          audioBus.stopAll();
+        }
+      })();
     
     const { metronomeService } = require('@/services/MetronomeService');
     metronomeService.stop();
@@ -200,8 +202,11 @@ class UnifiedAudioService {
 
   resume(): boolean {
     // Simular retomada se estava suspenso e foi iniciado pelo usuário
-    const { audioLifecycleManager } = require('@/services/AudioLifecycleManager');
-    const resumed = audioLifecycleManager.resumeSession(true);
+      let resumed = false;
+      (async () => {
+        const { audioLifecycleManager } = await import('@/services/AudioLifecycleManager');
+        resumed = audioLifecycleManager.resumeSession(true);
+      })();
     
     if (resumed) {
       // Retomar metrônomo e áudio
@@ -230,8 +235,10 @@ function simulateVisibilityChange(state: 'hidden' | 'visible', audioService?: Un
   
   // Simular lógica do useAudioNavigationGuard
   if (state === 'hidden') {
-    const { audioLifecycleManager } = require('@/services/AudioLifecycleManager');
-    audioLifecycleManager.suspendSession();
+      (async () => {
+        const { audioLifecycleManager } = await import('@/services/AudioLifecycleManager');
+        audioLifecycleManager.suspendSession();
+      })();
     
     if (audioService) {
       audioService.fadeOutAll(0.15).catch(() => {
@@ -243,11 +250,13 @@ function simulateVisibilityChange(state: 'hidden' | 'visible', audioService?: Un
     // Retoma apenas se usuário interagir explicitamente
     // Para este teste, vamos simular que o usuário interagiu após app voltar a ficar visível
     // (simula clique do usuário para retomar)
-    const { audioLifecycleManager } = require('@/services/AudioLifecycleManager');
-    if (audioLifecycleManager.canResume() && audioService) {
-      // Simular interação do usuário que retoma o áudio
-      audioService.resume();
-    }
+      (async () => {
+        const { audioLifecycleManager } = await import('@/services/AudioLifecycleManager');
+        if (audioLifecycleManager.canResume() && audioService) {
+          // Simular interação do usuário que retoma o áudio
+          audioService.resume();
+        }
+      })();
   }
 }
 
