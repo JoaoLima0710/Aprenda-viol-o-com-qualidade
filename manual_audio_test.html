@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Teste Manual WebAudio</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; }
+    button { font-size: 1.2em; padding: 0.5em 1em; }
+    #status { margin-top: 1em; color: green; }
+  </style>
+</head>
+<body>
+  <h1>Teste Manual WebAudio</h1>
+  <p>Pressione o botão abaixo para tocar um som de teste usando AudioContext, OscillatorNode e GainNode.</p>
+  <button id="playBtn">Tocar Som</button>
+  <div id="status"></div>
+  <script>
+    document.getElementById('playBtn').onclick = async function () {
+      const status = document.getElementById('status');
+      try {
+        // Criar contexto de áudio
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        // Criar oscilador
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = 440; // Lá
+        // Criar ganho
+        const gain = ctx.createGain();
+        gain.gain.value = 0.2; // Volume baixo
+        // Conectar cadeia
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        // Tocar por 2 segundos
+        osc.start();
+        status.textContent = 'Tocando som...';
+        setTimeout(() => {
+          osc.stop();
+          ctx.close();
+          status.textContent = 'Teste concluído. Se você ouviu um tom agudo por 2 segundos, está funcionando!';
+        }, 2000);
+      } catch (e) {
+        status.textContent = 'Erro: ' + e.message;
+        status.style.color = 'red';
+      }
+    };
+  </script>
+</body>
+</html>
