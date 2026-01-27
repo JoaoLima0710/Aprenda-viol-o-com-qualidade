@@ -30,7 +30,7 @@ const SOUNDFONT_INSTRUMENTS: Record<InstrumentType, string> = {
 
 class AudioServiceWithSamples {
   private instrument: Soundfont.Player | null = null;
-  private audioContext: AudioContext | null = null;
+  private audioContext: AudioContext | null = null; // Only set by explicit handler
   private isInitialized = false;
   private currentInstrument: InstrumentType = 'nylon-guitar';
   private isLoading = false;
@@ -54,48 +54,34 @@ class AudioServiceWithSamples {
   private wetGain: GainNode | null = null;
   private masterGain: GainNode | null = null;
 
+  /**
+   * Explicitly initialize audio (must be called by user gesture handler)
+   */
   async initialize() {
-    if (this.isInitialized) {
-      return true;
-    }
-
+    if (this.isInitialized) return true;
+    if (this.audioContext) throw new Error('AudioContext already initialized!');
     try {
-      // Create AudioContext
+      // Only allow initialization via explicit handler
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
       console.log('🎵 AudioContext created');
-      
-      // Create effects chain
       this.createEffectsChain();
-      
-      // Load initial instrument
       const loadSuccess = await this.loadInstrument(this.currentInstrument);
-      
       if (!loadSuccess && this.loadErrorCount >= this.maxLoadErrors) {
         console.warn('⚠️ Samples failed to load multiple times, will use fallback');
         const sampleError = new (await import('@/errors/AudioErrors')).SampleLoadError('Samples failed to load');
         await (await import('./AudioResilienceService')).audioResilienceService.handleFailure(sampleError, 'initialize', true);
         throw sampleError;
       }
-      
       this.isInitialized = true;
       console.log('✅ AudioServiceWithSamples initialized with', this.currentInstrument);
-      
-      // Preload common notes in background
       this.preloadCommonNotes();
-      
-      // Normalize volume of common notes
       this.normalizeCommonNotes();
-      
       return true;
     } catch (error) {
       console.error('❌ Error initializing AudioServiceWithSamples:', error);
       this.loadErrorCount++;
-      
-      // Reportar falha ao AudioResilienceService
       const { audioResilienceService } = await import('./AudioResilienceService');
       await audioResilienceService.handleFailure(error, 'initialize', true);
-      
       return false;
     }
   }
@@ -762,6 +748,10 @@ class AudioServiceWithSamples {
       this.audioContext = null;
     }
     this.isInitialized = false;
+    this.loadErrorCount = 0;
+    this.preloadedNotes.clear();
+    this.noteGains.clear();
+    this.preloadInProgress = false;
     console.log('🗑️ AudioServiceWithSamples disposed');
   }
 }

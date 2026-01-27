@@ -5,28 +5,47 @@
  * Este teste valida que o sistema preserva estado e permite retomada.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock do AudioBus para rastrear estado de playback
+
+// Mocks e variáveis precisam ser definidos antes dos vi.mock
 let isPlayingState = false;
 const mockStopAll = vi.fn(() => {
   isPlayingState = false;
 });
 const mockFadeOutAll = vi.fn(async () => {
-  // Simular fade-out que eventualmente para tudo
   await new Promise(resolve => setTimeout(resolve, 10));
   isPlayingState = false;
 });
-
 const mockPlayOscillator = vi.fn(() => {
   isPlayingState = true;
   return true;
 });
-
 const mockPlayBuffer = vi.fn(async () => {
   isPlayingState = true;
   return true;
 });
+let lifecycleState: 'idle' | 'playing' | 'paused' | 'suspended' | 'stopped' = 'idle';
+let wasUserInitiated = false;
+let previousState: 'playing' | 'paused' | null = null;
+let metronomePlaying = false;
+const mockMetronomeStart = vi.fn(async () => {
+  metronomePlaying = true;
+});
+const mockMetronomeStop = vi.fn(() => {
+  metronomePlaying = false;
+});
+const mockMetronomeFadeOut = vi.fn(async () => {
+  await new Promise(resolve => setTimeout(resolve, 10));
+  metronomePlaying = false;
+});
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { getAudioBus } from '@/audio';
+import { audioLifecycleManager } from '@/services/AudioLifecycleManager';
+import { metronomeService } from '@/services/MetronomeService';
+
+// Mock do AudioBus para rastrear estado de playback
+// (Removido bloco duplicado)
 
 vi.mock('@/audio', () => ({
   getAudioBus: vi.fn(() => ({
@@ -53,9 +72,7 @@ vi.mock('@/services/AudioPriorityManager', () => ({
 }));
 
 // Mock do AudioLifecycleManager
-let lifecycleState: 'idle' | 'playing' | 'paused' | 'suspended' | 'stopped' = 'idle';
-let wasUserInitiated = false;
-let previousState: 'playing' | 'paused' | null = null;
+// (Removido bloco duplicado)
 
 const mockStopSession = vi.fn(() => {
   lifecycleState = 'stopped';
@@ -95,17 +112,7 @@ vi.mock('@/services/AudioLifecycleManager', () => ({
 }));
 
 // Mock do MetronomeService
-let metronomePlaying = false;
-const mockMetronomeStart = vi.fn(async () => {
-  metronomePlaying = true;
-});
-const mockMetronomeStop = vi.fn(() => {
-  metronomePlaying = false;
-});
-const mockMetronomeFadeOut = vi.fn(async () => {
-  await new Promise(resolve => setTimeout(resolve, 10));
-  metronomePlaying = false;
-});
+// (Removido bloco duplicado)
 
 vi.mock('@/services/MetronomeService', () => ({
   metronomeService: {
@@ -146,19 +153,14 @@ class UnifiedAudioService {
     if (!this.isInitialized) {
       await this.initialize();
     }
-    
     // Marcar como iniciado pelo usuário
     wasUserInitiated = true;
     lifecycleState = 'playing';
-    
     // Simular tocar treino (metrônomo + acorde)
-    const { metronomeService } = await import('@/services/MetronomeService');
     await metronomeService.start(120, '4/4');
-    
     if (this.activeService) {
       await this.activeService.playChord('C', 1.0);
     }
-    
     this.isPlayingFlag = true;
     isPlayingState = true;
   }
@@ -166,57 +168,39 @@ class UnifiedAudioService {
   stopAll(): void {
     this.isPlayingFlag = false;
     isPlayingState = false;
-      (async () => {
-        const { getAudioBus } = await import('@/audio');
-        const audioBus = getAudioBus();
-        if (audioBus) {
-          audioBus.stopAll();
-        }
-      })();
-    
-    const { metronomeService } = require('@/services/MetronomeService');
+    const audioBus = getAudioBus();
+    if (audioBus) {
+      audioBus.stopAll();
+    }
     metronomeService.stop();
   }
 
   async fadeOutAll(duration?: number): Promise<void> {
-    const { getAudioBus } = await import('@/audio');
     const audioBus = getAudioBus();
     if (audioBus) {
       await audioBus.fadeOutAll(duration || 0.15);
     }
-    
-    const { metronomeService } = await import('@/services/MetronomeService');
     if (metronomeService.getIsPlaying()) {
       await metronomeService.fadeOut(duration || 0.15);
     }
-    
     this.isPlayingFlag = false;
     isPlayingState = false;
   }
 
   isPlaying(): boolean {
-    const { getAudioBus } = require('@/audio');
     const audioBus = getAudioBus();
     return audioBus ? audioBus.isPlaying() : this.isPlayingFlag;
   }
 
   resume(): boolean {
     // Simular retomada se estava suspenso e foi iniciado pelo usuário
-      let resumed = false;
-      (async () => {
-        const { audioLifecycleManager } = await import('@/services/AudioLifecycleManager');
-        resumed = audioLifecycleManager.resumeSession(true);
-      })();
-    
+    const resumed = audioLifecycleManager.resumeSession ? audioLifecycleManager.resumeSession(true) : false;
     if (resumed) {
-      // Retomar metrônomo e áudio
-      const { metronomeService } = require('@/services/MetronomeService');
       metronomeService.start(120, '4/4');
       this.isPlayingFlag = true;
       isPlayingState = true;
       return true;
     }
-    
     return false;
   }
 }
@@ -319,7 +303,6 @@ describe('UnifiedAudioService - Resume on Visibility', () => {
       await new Promise(resolve => setTimeout(resolve, 20));
       
       // Deve estar suspenso
-      const { audioLifecycleManager } = require('@/services/AudioLifecycleManager');
       expect(audioLifecycleManager.getState()).toBe('suspended');
     });
 
@@ -328,7 +311,6 @@ describe('UnifiedAudioService - Resume on Visibility', () => {
       simulateVisibilityChange('hidden');
       
       // Verificar que estado anterior foi preservado
-      const { audioLifecycleManager } = require('@/services/AudioLifecycleManager');
       const session = audioLifecycleManager.getSession();
       expect(session.previousState).toBe('playing');
       expect(session.wasUserInitiated).toBe(true);

@@ -1,4 +1,6 @@
-import { test, expect } from '@playwright/test';
+
+// ATENÇÃO: Este arquivo é E2E Playwright. Não deve ser incluído em execuções do Vitest.
+// Garanta que scripts e globs de testes unitários/integration NÃO incluam arquivos .spec.ts da pasta e2e/.
 
 /**
  * Teste E2E: Áudio só toca após gesto do usuário

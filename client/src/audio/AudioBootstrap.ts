@@ -1,7 +1,7 @@
 // AudioBootstrap.ts
 // ÚNICO ponto de inicialização do AudioContext
 
-import { AudioEngine } from '@/audio/AudioEngine';
+import AudioEngine from '@/audio/AudioEngine';
 
 class AudioBootstrap {
   private static instance: AudioBootstrap;

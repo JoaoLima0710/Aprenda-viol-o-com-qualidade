@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event';
 import { AudioInitButton } from '../AudioInitButton';
 import { unifiedAudioService } from '@/services/UnifiedAudioService';
 
+import React from 'react';
 // Mock do UnifiedAudioService
 vi.mock('@/services/UnifiedAudioService', () => ({
   unifiedAudioService: {

@@ -9,17 +9,11 @@
  * - Oferecer retry automático e manual
  * - Exibir mensagens claras
  * - Fallback sonoro simples
- * 
- * REGRAS:
- * - Sempre reportar erros ao usuário
- * - Retry automático com backoff exponencial
- * - Fallback para síntese quando samples falham
- * - Mensagens claras e acionáveis
  */
 
 import React from 'react';
-import { unifiedAudioService } from './UnifiedAudioService';
-import { audioService } from './AudioService';
+// import { unifiedAudioService } from './UnifiedAudioService';
+// import { audioService } from './AudioService';
 import {
   AudioError,
   SampleLoadError,
@@ -48,6 +42,14 @@ class AudioResilienceService {
   private maxRetries = 3;
   private retryDelays = [1000, 2000, 4000]; // Backoff exponencial
   private failureThreshold = 5; // Máximo de falhas antes de desabilitar
+  private onInitializeRequest: (() => Promise<void>) | null = null;
+
+  /**
+   * Configura o callback para reinicialização do áudio
+   */
+  setInitializationHandler(handler: () => Promise<void>): void {
+    this.onInitializeRequest = handler;
+  }
 
   /**
    * Trata uma falha de áudio
@@ -63,27 +65,30 @@ class AudioResilienceService {
       context,
       timestamp: Date.now(),
       recoverable: this.isRecoverable(error),
-      retryCount: 0,
+      retryCount: this.getRetryCount(this.categorizeFailure(error)),
     };
 
+    console.error(`🛡️ Audio Resilience: Failure detected in ${context}`, failure);
     this.failures.push(failure);
 
     // Verificar se excedeu o threshold
     if (this.failures.length >= this.failureThreshold) {
-      console.error('🚫 Muitas falhas de áudio, desabilitando sistema');
-      this.showUserMessage(failure, context);
-      return false;
+      console.error('🚫 Muitas falhas de áudio, sugerindo recarregamento');
     }
 
     // Mostrar mensagem ao usuário
     this.showUserMessage(failure, context);
 
     // Retry automático se aplicável
-    if (autoRetry && failure.recoverable) {
+    if (autoRetry && failure.recoverable && failure.retryCount < this.maxRetries) {
       return await this.attemptRetry(failure, context);
     }
 
     return false;
+  }
+
+  private getRetryCount(type: AudioFailureType): number {
+    return this.failures.filter(f => f.type === type).length - 1;
   }
 
   /**
@@ -106,16 +111,12 @@ class AudioResilienceService {
    * Verifica se a falha é recuperável
    */
   private isRecoverable(error: Error): boolean {
-    // Falhas de contexto não são recuperáveis
     if (error.message.includes('AudioContext') && error.message.includes('not supported')) {
       return false;
     }
-
-    // Falhas de permissão não são recuperáveis
     if (error.message.includes('permission') || error.message.includes('denied')) {
       return false;
     }
-
     return true;
   }
 
@@ -126,33 +127,20 @@ class AudioResilienceService {
     failure: AudioFailure,
     context: string
   ): Promise<boolean> {
-    if (failure.retryCount >= this.maxRetries) {
-      console.warn(`⚠️ Máximo de tentativas atingido para ${context}`);
-      return false;
-    }
-
     const delay = this.retryDelays[failure.retryCount] || 4000;
-    failure.retryCount++;
 
-    console.log(`🔄 Tentando recuperar ${context} (tentativa ${failure.retryCount}/${this.maxRetries})...`);
+    console.log(`🔄 Tentando recuperar ${context} (tentativa ${failure.retryCount + 1}/${this.maxRetries})...`);
 
     await new Promise(resolve => setTimeout(resolve, delay));
 
     try {
-      switch (context) {
-        case 'initialize':
-          await unifiedAudioService.initialize();
-          break;
-        case 'playNote':
-        case 'playChord':
-          // Não tenta retry automático para playback
-          return false;
-        default:
-          return false;
+      if (this.onInitializeRequest) {
+        await this.onInitializeRequest();
+        console.log(`✅ Recuperação bem-sucedida para ${context}`);
+        toast.success('Sistema de áudio recuperado');
+        return true;
       }
-
-      console.log(`✅ Recuperação bem-sucedida para ${context}`);
-      return true;
+      return false;
     } catch (retryError) {
       console.error(`❌ Retry falhou para ${context}:`, retryError);
       return false;
@@ -166,13 +154,9 @@ class AudioResilienceService {
     console.log(`🔄 Retry manual para ${context}`);
 
     try {
-      switch (context) {
-        case 'initialize':
-          await unifiedAudioService.initialize();
-          toast.success('Sistema de áudio reinicializado');
-          break;
-        default:
-          toast.info('Tentando recuperar...');
+      if (this.onInitializeRequest) {
+        await this.onInitializeRequest();
+        toast.success('Sistema de áudio reinicializado');
       }
     } catch (error) {
       console.error('❌ Retry manual falhou:', error);
@@ -188,7 +172,6 @@ class AudioResilienceService {
     const description = this.getFailureDescription(failure, context);
     const action = failure.recoverable ? 'Tentar Novamente' : 'Ver Configurações';
 
-    // Toast com ação de retry
     toast.error(title, {
       description: (
         <div className="space-y-2">
@@ -240,7 +223,7 @@ class AudioResilienceService {
     }
 
     if (failure.retryCount > 0) {
-      return `${baseMessage} Tentativa ${failure.retryCount + 1} de ${this.maxRetries + 1}.`;
+      return `${baseMessage} Tentativa ${failure.retryCount + 1} de ${this.maxRetries}.`;
     }
 
     return baseMessage;

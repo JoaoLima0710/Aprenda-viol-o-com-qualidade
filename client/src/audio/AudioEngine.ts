@@ -6,6 +6,7 @@ import { AudioEngineState, AudioErrorType, AudioEventCallback } from './types';
  */
 class AudioEngine {
   private static instance: AudioEngine | null = null;
+  private static audioContextCreated: boolean = false; // Global guard
   
   private audioContext: AudioContext | null = null;
   private masterGain: GainNode | null = null;
@@ -29,6 +30,10 @@ class AudioEngine {
   /**
    * Obtém a instância única do AudioEngine
    */
+  /**
+   * Obtém a instância única do AudioEngine
+   * Garante que nunca haverá mais de um AudioContext global
+   */
   public static getInstance(): AudioEngine {
     if (!AudioEngine.instance) {
       AudioEngine.instance = new AudioEngine();
@@ -40,16 +45,25 @@ class AudioEngine {
    * Inicializa o AudioContext
    * Deve ser chamado após interação do usuário (click, touch, keypress)
    */
+  /**
+   * Inicializa o AudioContext
+   * Deve ser chamado após interação do usuário (click, touch, keypress)
+   * Global guard: nunca cria mais de um AudioContext
+   */
   public async initialize(): Promise<void> {
     if (this.state.isInitialized && this.audioContext) {
       await this.ensureResumed();
       return;
     }
 
+    if (AudioEngine.audioContextCreated) {
+      // Defensive: nunca cria mais de um AudioContext
+      throw this.createError('CONTEXT_FAILED', 'Tentativa de criar múltiplos AudioContext! Use AudioEngine singleton.');
+    }
+
     try {
       // Criar AudioContext com fallback para webkit
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      
       if (!AudioContextClass) {
         throw this.createError('CONTEXT_FAILED', 'Web Audio API não suportada neste navegador');
       }
@@ -58,6 +72,7 @@ class AudioEngine {
         latencyHint: 'interactive',
         sampleRate: 44100,
       });
+      AudioEngine.audioContextCreated = true;
 
       // Criar nós de processamento
       this.setupAudioGraph();
@@ -303,6 +318,7 @@ class AudioEngine {
       this.state.isInitialized = false;
       this.state.isResumed = false;
       this.emit('disposed');
+      AudioEngine.audioContextCreated = false;
     }
     AudioEngine.instance = null;
   }

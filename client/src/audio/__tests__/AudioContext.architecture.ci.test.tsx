@@ -16,23 +16,38 @@ class GuardedAudioContext {
   }
   resume = vi.fn();
   close = vi.fn();
-  createGain = vi.fn();
-  createAnalyser = vi.fn();
-  createMediaStreamSource = vi.fn();
+  createGain = vi.fn(() => ({
+    gain: { value: 0.8 },
+    connect: vi.fn(),
+  }));
+  createAnalyser = vi.fn(() => ({
+    fftSize: 2048,
+    smoothingTimeConstant: 0.8,
+    connect: vi.fn(),
+  }));
+  createDynamicsCompressor = vi.fn(() => ({
+    threshold: { value: -24 },
+    knee: { value: 30 },
+    ratio: { value: 12 },
+    attack: { value: 0.003 },
+    release: { value: 0.25 },
+    connect: vi.fn(),
+  }));
+  createMediaStreamSource = vi.fn(() => ({ connect: vi.fn() }));
+  destination = { connect: vi.fn() };
 }
-
-vi.stubGlobal('AudioContext', GuardedAudioContext);
-
-
 
 
 function TestComponent() {
   return (
-    <button data-testid="audio-btn" onClick={e => audioBootstrap.initialize(e)}>
+    <button data-testid="audio-btn" onClick={e => audioBootstrap.initialize(e as any)}>
       Ativar Áudio
     </button>
   );
 }
+
+vi.stubGlobal('AudioContext', GuardedAudioContext);
+vi.stubGlobal('webkitAudioContext', GuardedAudioContext); // Fallback for AudioEngine
 
 describe('AudioContext Architecture CI Guard', () => {
   beforeEach(() => {
