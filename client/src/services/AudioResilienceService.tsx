@@ -20,15 +20,15 @@
 import React from 'react';
 import { unifiedAudioService } from './UnifiedAudioService';
 import { audioService } from './AudioService';
-import { 
-  AudioError, 
-  SampleLoadError, 
+import {
+  AudioError,
+  SampleLoadError,
   AudioInitializationError,
-  handleAudioError 
+  handleAudioError
 } from '@/errors/AudioErrors';
 import { toast } from 'sonner';
 
-export type AudioFailureType = 
+export type AudioFailureType =
   | 'sample_load'
   | 'initialization'
   | 'playback'
@@ -53,8 +53,8 @@ class AudioResilienceService {
    * Trata uma falha de áudio
    */
   async handleFailure(
-    error: Error, 
-    context: string, 
+    error: Error,
+    context: string,
     autoRetry: boolean = true
   ): Promise<boolean> {
     const failure: AudioFailure = {
@@ -110,7 +110,7 @@ class AudioResilienceService {
     if (error.message.includes('AudioContext') && error.message.includes('not supported')) {
       return false;
     }
-    
+
     // Falhas de permissão não são recuperáveis
     if (error.message.includes('permission') || error.message.includes('denied')) {
       return false;
@@ -123,7 +123,7 @@ class AudioResilienceService {
    * Tenta recuperar da falha
    */
   private async attemptRetry(
-    failure: AudioFailure, 
+    failure: AudioFailure,
     context: string
   ): Promise<boolean> {
     if (failure.retryCount >= this.maxRetries) {
@@ -164,7 +164,7 @@ class AudioResilienceService {
    */
   async manualRetry(context: string): Promise<void> {
     console.log(`🔄 Retry manual para ${context}`);
-    
+
     try {
       switch (context) {
         case 'initialize':
@@ -233,7 +233,7 @@ class AudioResilienceService {
    * Obtém descrição da falha
    */
   private getFailureDescription(failure: AudioFailure, context: string): string {
-    const baseMessage = handleAudioError(failure.error).userMessage;
+    const baseMessage = handleAudioError(failure.error).message;
 
     if (!failure.recoverable) {
       return `${baseMessage} Por favor, verifique as configurações do navegador.`;
@@ -282,10 +282,40 @@ class AudioResilienceService {
   }
 
   /**
-   * Limpa histórico de falhas
+   * Tenta tocar um fallback simples (oscilador) quando tudo mais falha
    */
-  clearFailureHistory(): void {
-    this.reset();
+  async playSimpleFallback(noteName: string, duration: number = 0.5): Promise<void> {
+    console.log(`⚠️ Tentando fallback simples para ${noteName}`);
+
+    try {
+      const { getAudioBus } = await import('@/audio');
+      const audioBus = getAudioBus();
+
+      if (audioBus) {
+        // Mapeamento simples de nota para frequência
+        const noteToFreq: Record<string, number> = {
+          'C': 261.63, 'C#': 277.18, 'D': 293.66, 'D#': 311.13,
+          'E': 329.63, 'F': 349.23, 'F#': 369.99, 'G': 392.00,
+          'G#': 415.30, 'A': 440.00, 'A#': 466.16, 'B': 493.88
+        };
+
+        // Extrair nome da nota (ex: C#4 -> C#)
+        const noteBase = noteName.replace(/[0-9]/g, '');
+        const freq = noteToFreq[noteBase] || 440;
+
+        await audioBus.playOscillator({
+          frequency: freq,
+          type: 'triangle',
+          duration: duration,
+          channel: 'effects', // Canal seguro para fallback
+          volume: 0.3
+        });
+
+        console.log('✅ Fallback simples tocou com sucesso');
+      }
+    } catch (error) {
+      console.error('❌ Falha total no fallback:', error);
+    }
   }
 }
 

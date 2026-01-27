@@ -57,6 +57,9 @@ function AudioPlayChordButton({
       return;
     }
 
+    // Mark interaction immediately on click - ALWAYS, even if ready
+    await unifiedAudioService.markUserInteraction();
+
     if (!isReady) {
       setIsLoading(true);
       try {
@@ -140,7 +143,7 @@ function AudioPlayChordButton({
         onClick={playAudio}
         disabled={isLoading}
         variant={isPlaying ? 'destructive' : 'default'}
-        size={size}
+        size={size === 'md' ? 'default' : size}
         className={sizeClasses[size]}
       >
         {isLoading ? (
@@ -152,12 +155,12 @@ function AudioPlayChordButton({
         )}
         {displayLabel}
       </Button>
-      
+
       {canStop && (
         <Button
           onClick={stopAudio}
           variant="outline"
-          size={size}
+          size={size === 'md' ? 'default' : size}
           className={sizeClasses[size]}
         >
           <VolumeX className={`${iconSizes[size]} mr-1`} />

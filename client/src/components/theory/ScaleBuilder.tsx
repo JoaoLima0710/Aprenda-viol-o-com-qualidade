@@ -90,11 +90,11 @@ export function ScaleBuilder() {
     }
 
     const targetIntervals = SCALE_TEMPLATES[targetScaleType].intervals;
-    
+
     // Comparar intervalos (ignorar ordem, apenas valores)
     const selectedSorted = [...selectedIntervals].sort((a, b) => a - b);
     const targetSorted = [...targetIntervals].sort((a, b) => a - b);
-    
+
     const matches = selectedSorted.length === targetSorted.length &&
       selectedSorted.every((val, idx) => val === targetSorted[idx]);
 
@@ -116,7 +116,7 @@ export function ScaleBuilder() {
     }
   };
 
-  const { playNotes } = useAudio();
+  const { isReady } = useAudio();
   const playbackAbortRef = React.useRef<AbortController | null>(null);
 
   // Parar áudio quando componente desmontar ou escala mudar
@@ -135,7 +135,10 @@ export function ScaleBuilder() {
 
   const handlePlayScale = async () => {
     if (selectedIntervals.length === 0) return;
-    
+
+    // Mark interaction immediately - ALWAYS
+    await unifiedAudioService.markUserInteraction();
+
     // Se já está tocando, parar
     if (isPlaying) {
       if (playbackAbortRef.current) {
@@ -148,7 +151,7 @@ export function ScaleBuilder() {
 
     setIsPlaying(true);
     playbackAbortRef.current = new AbortController();
-    
+
     try {
       await unifiedAudioService.ensureInitialized();
       const rootIndex = CHROMATIC_NOTES.indexOf(rootNote);
@@ -159,12 +162,12 @@ export function ScaleBuilder() {
       });
       for (let i = 0; i < scaleNotes.length; i++) {
         if (playbackAbortRef.current?.signal.aborted) break;
-        await playNotes([`${scaleNotes[i]}4`], { duration: 0.3 });
+        await unifiedAudioService.playNote(`${scaleNotes[i]}4`, 0.3);
         if (playbackAbortRef.current?.signal.aborted) break;
         await new Promise(resolve => setTimeout(resolve, 200));
       }
       if (!playbackAbortRef.current?.signal.aborted) {
-        await playNotes([`${rootNote}5`], { duration: 0.3 });
+        await unifiedAudioService.playNote(`${rootNote}5`, 0.3);
       }
     } catch (error) {
       console.error('Erro ao tocar escala:', error);
@@ -185,12 +188,12 @@ export function ScaleBuilder() {
   const generateScaleNotes = (): string[] => {
     const rootIndex = CHROMATIC_NOTES.indexOf(rootNote);
     const notes: string[] = [];
-    
+
     selectedIntervals.forEach(interval => {
       const noteIndex = (rootIndex + interval) % 12;
       notes.push(CHROMATIC_NOTES[noteIndex]);
     });
-    
+
     return notes;
   };
 
@@ -229,11 +232,10 @@ export function ScaleBuilder() {
             <button
               key={note}
               onClick={() => setRootNote(note)}
-              className={`p-3 rounded-lg font-bold text-white transition-all ${
-                rootNote === note
-                  ? 'bg-amber-500 hover:bg-amber-600 scale-105'
-                  : 'bg-white/10 hover:bg-white/20'
-              }`}
+              className={`p-3 rounded-lg font-bold text-white transition-all ${rootNote === note
+                ? 'bg-amber-500 hover:bg-amber-600 scale-105'
+                : 'bg-white/10 hover:bg-white/20'
+                }`}
             >
               {note}
             </button>
@@ -320,11 +322,10 @@ export function ScaleBuilder() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className={`p-4 rounded-lg mb-6 ${
-              feedback.correct 
-                ? 'bg-green-500/20 border border-green-500/30' 
-                : 'bg-red-500/20 border border-red-500/30'
-            }`}
+            className={`p-4 rounded-lg mb-6 ${feedback.correct
+              ? 'bg-green-500/20 border border-green-500/30'
+              : 'bg-red-500/20 border border-red-500/30'
+              }`}
           >
             <div className="flex items-center gap-2">
               {feedback.correct ? (
@@ -344,17 +345,16 @@ export function ScaleBuilder() {
         <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
           {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((interval) => {
             const isSelected = selectedIntervals.includes(interval);
-            
+
             return (
               <button
                 key={interval}
                 onClick={() => handleIntervalToggle(interval)}
                 disabled={isPlaying}
-                className={`p-3 rounded-lg font-bold text-white transition-all disabled:opacity-50 ${
-                  isSelected
-                    ? 'bg-amber-500 hover:bg-amber-600 scale-105'
-                    : 'bg-white/10 hover:bg-white/20'
-                }`}
+                className={`p-3 rounded-lg font-bold text-white transition-all disabled:opacity-50 ${isSelected
+                  ? 'bg-amber-500 hover:bg-amber-600 scale-105'
+                  : 'bg-white/10 hover:bg-white/20'
+                  }`}
               >
                 {interval}
                 <div className="text-xs mt-1 opacity-75">
@@ -376,14 +376,13 @@ export function ScaleBuilder() {
           <CheckCircle2 className="w-4 h-4 mr-2" />
           Verificar
         </Button>
-        
+
         <Button
           onClick={handlePlayScale}
           disabled={selectedIntervals.length === 0}
           variant="outline"
-          className={`border-white/20 text-white hover:bg-white/10 ${
-            isPlaying ? 'bg-red-500/20 border-red-500/50' : ''
-          }`}
+          className={`border-white/20 text-white hover:bg-white/10 ${isPlaying ? 'bg-red-500/20 border-red-500/50' : ''
+            }`}
         >
           {isPlaying ? (
             <>
@@ -397,7 +396,7 @@ export function ScaleBuilder() {
             </>
           )}
         </Button>
-        
+
         <Button
           onClick={handleReset}
           variant="outline"
@@ -410,7 +409,7 @@ export function ScaleBuilder() {
       {/* Dica */}
       <div className="mt-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
         <p className="text-xs text-gray-400">
-          <strong className="text-blue-400">💡 Dica:</strong> Escala Maior = 0, 2, 4, 5, 7, 9, 11 semitons. 
+          <strong className="text-blue-400">💡 Dica:</strong> Escala Maior = 0, 2, 4, 5, 7, 9, 11 semitons.
           Escala Menor Natural = 0, 2, 3, 5, 7, 8, 10 semitons.
         </p>
       </div>

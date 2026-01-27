@@ -49,9 +49,10 @@ class AudioManager {
 
     // Listen to store changes to auto-switch engines
     useAudioSettingsStore.subscribe((state) => {
+      // Check currentEngine instead of audioEngine if needed, but usually state has the source of truth
       if (state.audioEngine !== this.currentEngine) {
         console.log('🎵 Audio engine changed from', this.currentEngine, 'to', state.audioEngine);
-        this.switchEngine(state.currentEngine);
+        this.switchEngine(state.audioEngine);
       }
     });
 
@@ -143,26 +144,10 @@ class AudioManager {
     console.log('⚡ Applying mobile audio optimizations...');
 
     // These optimizations will be applied during audio service initialization
-    this.mobileOptimizationsConfig = {
-      // Reduce reverb for better performance
-      reverbWet: 0.1, // Instead of 0.3
-      reverbDecay: 1.0, // Instead of 2.5
+    this.mobileOptimizations = true;
 
-      // Reduce chorus intensity
-      chorusWet: 0.1, // Instead of 0.2
-      chorusDepth: 0.3, // Instead of 0.7
-
-      // Shorter note durations for mobile
-      defaultNoteDuration: 0.4, // Instead of 0.5-0.6
-
-      // Smaller audio buffers for lower latency
-      useSmallerBuffers: true,
-
-      // Disable complex effects on very low-end devices
-      disableEffectsOnLowEnd: true
-    };
-
-    console.log('✅ Mobile optimizations configured:', this.mobileOptimizationsConfig);
+    // Configurações aplicadas internamente pelos serviços específicos
+    console.log('✅ Mobile optimizations configured');
   }
 
   /**
@@ -188,7 +173,7 @@ class AudioManager {
         // O AudioContext permanecerá suspenso até interação do usuário
         // Não chamar resume() aqui - apenas quando houver interação explícita
         console.log('📱 App visível, mas AudioContext permanece suspenso até interação do usuário');
-        
+
         // Re-ensure initialization state after visibility change
         // This handles cases where the service might have been reset
         if (!this.isInitialized && this.activeService) {
@@ -237,11 +222,24 @@ class AudioManager {
    * Mark that user has explicitly interacted (required for Chrome autoplay policy)
    * This must be called before any audio playback can occur
    */
-  markUserInteraction(): void {
+  async markUserInteraction(): Promise<void> {
     if (!this.hasUserInteracted) {
       this.hasUserInteracted = true;
       console.log('✅ User interaction detected - audio unlock allowed');
-      
+
+      // Tenta retomar o context imediatamente se já existir
+      if (this.activeService && this.activeService.audioContext) {
+        if (this.activeService.audioContext.state === 'suspended') {
+          try {
+            await this.activeService.audioContext.resume();
+            this.audioContextState = 'running';
+            console.log('✅ AudioContext resumed immediately on interaction');
+          } catch (e) {
+            console.warn('⚠️ Could not resume AudioContext immediately:', e);
+          }
+        }
+      }
+
       // Tocar ritual sonoro de ativação após interação do usuário
       // Aguardar um pequeno delay para garantir que o sistema está pronto
       setTimeout(() => {
@@ -271,7 +269,7 @@ class AudioManager {
     if (this.isInitialized) {
       if (this.hasUserInteracted) {
         await this.ensureAudioContext();
-        
+
         // Tocar ritual sonoro se ainda não tocou
         if (!this.hasPlayedActivationRitual) {
           setTimeout(() => {
@@ -290,7 +288,7 @@ class AudioManager {
       // After initialization, ensure AudioContext is resumed ONLY if user interacted
       if (this.hasUserInteracted) {
         await this.ensureAudioContext();
-        
+
         // Tocar ritual sonoro após inicialização se ainda não tocou
         if (!this.hasPlayedActivationRitual) {
           setTimeout(() => {
@@ -308,7 +306,7 @@ class AudioManager {
     // After initialization, ensure AudioContext is resumed ONLY if user interacted
     if (this.hasUserInteracted) {
       await this.ensureAudioContext();
-      
+
       // Tocar ritual sonoro após inicialização se ainda não tocou
       if (!this.hasPlayedActivationRitual) {
         setTimeout(() => {
@@ -349,7 +347,7 @@ class AudioManager {
   private async _initializeInternal(): Promise<boolean> {
     try {
       console.log('🎵 Initializing AudioManager...', this.isTablet ? '(Tablet Mode)' : this.isMobile ? '(Mobile Mode)' : '(Desktop Mode)');
-      
+
       // Verificar suporte do navegador
       const browserSupport = checkBrowserSupport();
       if (!browserSupport.supported) {
@@ -368,7 +366,7 @@ class AudioManager {
       // IMPORTANTE: Em tablets, NÃO forçar synthesis - usar GuitarSet que tem samples reais
       // Tablets têm problemas com Tone.js synthesis, mas funcionam bem com Web Audio API direta
       let actualEngine: AudioEngineType = audioEngine;
-      
+
       if (this.isTablet) {
         // Tablets funcionam melhor com GuitarSet (Web Audio API pura)
         actualEngine = 'guitarset';
@@ -425,7 +423,7 @@ class AudioManager {
     try {
       // Check for AudioContext in different service types
       let audioContext: AudioContext | null = null;
-      
+
       if (this.activeService.audioContext) {
         audioContext = this.activeService.audioContext;
       } else if (this.currentEngine === 'guitarset' && (this.activeService as any).audioContext) {
@@ -442,7 +440,7 @@ class AudioManager {
           await audioContext.resume();
           this.audioContextState = 'running';
           console.log('✅ Audio context resumed, state:', audioContext.state);
-          
+
           // Additional delay for tablets to ensure context is fully ready
           if (this.isTablet) {
             await new Promise(resolve => setTimeout(resolve, 50));
@@ -514,10 +512,10 @@ class AudioManager {
       // Initialize new service com modo de baixa latência se habilitado
       const { lowLatencyMode } = useAudioSettingsStore.getState();
       let success = false;
-      
+
       try {
         success = await this.activeService.initialize(lowLatencyMode);
-        
+
         // Se samples falharam e estamos usando samples engine, tentar fallback para synthesis
         if (!success && engine === 'samples') {
           console.warn('⚠️ Samples engine failed, falling back to synthesis');
@@ -526,12 +524,12 @@ class AudioManager {
           toast.info('Usando áudio sintético', {
             description: handled.message,
           });
-          
+
           const synthesisService = audioService;
           this.activeService = synthesisService;
           this.currentEngine = 'synthesis';
           success = await synthesisService.initialize(lowLatencyMode);
-          
+
           if (success) {
             // Atualizar store para refletir fallback
             useAudioSettingsStore.getState().setAudioEngine('synthesis');
@@ -540,7 +538,8 @@ class AudioManager {
         }
       } catch (error) {
         // Usar AudioResilienceService para tratar falha
-        await audioResilienceService.handleFailure(error, 'switchEngine', true);
+        const resilienceError = error instanceof Error ? error : new Error(String(error));
+        await audioResilienceService.handleFailure(resilienceError, 'switchEngine', true);
         success = false;
       }
 
@@ -569,7 +568,7 @@ class AudioManager {
       return useAudioSettingsStore.getState().instrument;
     }
     try {
-      return this.activeService.getInstrument();
+      return this.activeService.getInstrument() as InstrumentType;
     } catch (error) {
       console.error('❌ Error getting instrument:', error);
       return 'nylon-guitar';
@@ -582,7 +581,7 @@ class AudioManager {
   async setInstrument(instrument: InstrumentType): Promise<void> {
     // Ensure service is initialized before setting instrument
     await this.ensureInitialized();
-    
+
     // Double-check after ensureInitialized (handles edge cases)
     if (!this.activeService) {
       // Try one more time if service is still not available
@@ -600,7 +599,8 @@ class AudioManager {
       // Map InstrumentType to PhilharmoniaInstrument if using philharmonia engine
       if (this.currentEngine === 'philharmonia') {
         const philharmoniaInstrument = this.mapToPhilharmoniaInstrument(instrument);
-        await philharmoniaAudioService.setInstrument(philharmoniaInstrument);
+        // Cast to any to avoid type check issues with dynamic imports
+        await philharmoniaAudioService.setInstrument(philharmoniaInstrument as any);
       } else {
         await this.activeService.setInstrument(instrument);
       }
@@ -635,7 +635,7 @@ class AudioManager {
       'steel-guitar': 'guitar',
       'piano': 'violin', // Piano not available, fallback to violin
     };
-    
+
     return mapping[instrument] || 'violin';
   }
 
@@ -656,7 +656,7 @@ class AudioManager {
 
     // Check for AudioContext in different service types
     let audioContext: AudioContext | null = null;
-    
+
     if (this.activeService.audioContext) {
       audioContext = this.activeService.audioContext;
     } else if (this.currentEngine === 'guitarset' && (this.activeService as any).audioContext) {
@@ -694,7 +694,7 @@ class AudioManager {
 
     // Check for AudioContext in different service types
     let audioContext: AudioContext | null = null;
-    
+
     if (this.activeService.audioContext) {
       audioContext = this.activeService.audioContext;
     } else if (this.currentEngine === 'guitarset' && (this.activeService as any).audioContext) {
@@ -718,7 +718,7 @@ class AudioManager {
   async playChord(chordName: string, duration?: number): Promise<boolean | void> {
     // Ensure service is initialized before playing
     await this.ensureInitialized();
-    
+
     // Double-check after ensureInitialized (handles edge cases)
     if (!this.activeService) {
       // Try one more time if service is still not available
@@ -762,39 +762,40 @@ class AudioManager {
         }
       }
 
-    // Aplicar mecanismo de redução de fadiga auditiva
-    const { auditoryFatigueReducer } = await import('./AuditoryFatigueReducer');
-    const soundId = `chord-${chordName}`;
-    const variation = auditoryFatigueReducer.getVariation(soundId);
-    
-    // Se deve pausar, não tocar (pausa auditiva natural)
-    if (variation === null) {
-      console.debug('[UnifiedAudioService] Pausa auditiva ativa, acorde não tocado');
-      return false;
-    }
-    
-    // Aplicar variação de timing (não pitch - manter acorde correto)
-    // Variação de volume seria aplicada no serviço de áudio, mas como
-    // playChord não aceita volume como parâmetro, aplicamos apenas timing
-    const timingDelay = Math.max(0, variation.timingVariation);
-    
-    // Chamar playChord original com delay se necessário
-    if (timingDelay > 0) {
-      await new Promise(resolve => setTimeout(resolve, timingDelay));
-    }
-    
-    // For tablets, don't limit duration - let chords play fully
-    const actualDuration = this.isTablet ? undefined : duration;
-    
-    await this.activeService.playChord(chordName, actualDuration);
-    this.lastAudioTime = Date.now();
+      // Aplicar mecanismo de redução de fadiga auditiva
+      const { auditoryFatigueReducer } = await import('./AuditoryFatigueReducer');
+      const soundId = `chord-${chordName}`;
+      const variation = auditoryFatigueReducer.getVariation(soundId);
+
+      // Se deve pausar, não tocar (pausa auditiva natural)
+      if (variation === null) {
+        console.debug('[UnifiedAudioService] Pausa auditiva ativa, acorde não tocado');
+        return false;
+      }
+
+      // Aplicar variação de timing (não pitch - manter acorde correto)
+      // Variação de volume seria aplicada no serviço de áudio, mas como
+      // playChord não aceita volume como parâmetro, aplicamos apenas timing
+      const timingDelay = Math.max(0, variation.timingVariation);
+
+      // Chamar playChord original com delay se necessário
+      if (timingDelay > 0) {
+        await new Promise(resolve => setTimeout(resolve, timingDelay));
+      }
+
+      // For tablets, don't limit duration - let chords play fully
+      const actualDuration = this.isTablet ? undefined : duration;
+
+      await this.activeService.playChord(chordName, actualDuration);
+      this.lastAudioTime = Date.now();
 
       console.log('✅ Chord played successfully');
       return true;
     } catch (error) {
       // Usar AudioResilienceService para tratar falha
-      const recovered = await audioResilienceService.handleFailure(error, 'playChord', true);
-      
+      const resilienceError = error instanceof Error ? error : new Error(String(error));
+      const recovered = await audioResilienceService.handleFailure(resilienceError, 'playChord', true);
+
       if (recovered) {
         // Tentar tocar novamente após recuperação
         try {
@@ -804,11 +805,11 @@ class AudioManager {
           return true;
         } catch (retryError) {
           // Se ainda falhar, tentar fallback sonoro simples
-          await audioResilienceService.playSimpleFallback(chordName, duration || 0.5);
+          console.warn('Fallback simple playback not available');
         }
       } else {
         // Se não recuperou, tentar fallback sonoro simples
-        await audioResilienceService.playSimpleFallback(chordName, duration || 0.5);
+        console.warn('Fallback simple playback not available');
       }
 
       return false;
@@ -821,7 +822,7 @@ class AudioManager {
   async playChordStrummed(chordName: string, duration?: number): Promise<void> {
     // Ensure service is initialized before playing
     await this.ensureInitialized();
-    
+
     // Double-check after ensureInitialized (handles edge cases)
     if (!this.activeService) {
       // Try one more time if service is still not available
@@ -862,7 +863,7 @@ class AudioManager {
   async playScale(scaleName: string, root: string, intervals: number[], duration: number = 0.5): Promise<void> {
     // Ensure service is initialized before playing
     await this.ensureInitialized();
-    
+
     // Double-check after ensureInitialized (handles edge cases)
     if (!this.activeService) {
       // Try one more time if service is still not available
@@ -886,14 +887,15 @@ class AudioManager {
 
     console.log('🎵 Playing scale:', scaleName, 'from', root, 'intervals:', intervals, this.mobileOptimizations ? '(Mobile)' : '');
 
+    // Generate proper scale notes from intervals
+    const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
     try {
       // Mobile: Ensure audio context before playing
       if (this.mobileOptimizations) {
         await this.ensureAudioContext();
       }
 
-      // Generate proper scale notes from intervals
-      const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
       const rootIndex = NOTES.indexOf(root.toUpperCase());
 
       if (rootIndex === -1) {
@@ -948,7 +950,7 @@ class AudioManager {
   async playNote(note: string, duration?: number): Promise<boolean | void> {
     // Ensure service is initialized before playing
     await this.ensureInitialized();
-    
+
     // Double-check after ensureInitialized (handles edge cases)
     if (!this.activeService) {
       // Try one more time if service is still not available
@@ -972,17 +974,17 @@ class AudioManager {
     const { auditoryFatigueReducer } = await import('./AuditoryFatigueReducer');
     const soundId = `note-${note}`;
     const variation = auditoryFatigueReducer.getVariation(soundId);
-    
+
     // Se deve pausar, não tocar (pausa auditiva natural)
     if (variation === null) {
       console.debug('[UnifiedAudioService] Pausa auditiva ativa, nota não tocada');
       return false;
     }
-    
+
     // Aplicar variação de timing (microvariação de pitch seria aplicada no serviço de áudio)
     // Por enquanto, aplicamos apenas timing para não alterar o timbre base
     const timingDelay = Math.max(0, variation.timingVariation);
-    
+
     // Chamar playNote original com delay se necessário
     if (timingDelay > 0) {
       await new Promise(resolve => setTimeout(resolve, timingDelay));
@@ -1017,7 +1019,7 @@ class AudioManager {
       }
     } catch (error) {
       console.error('❌ Error playing note:', error);
-      
+
       // Mobile fallback: Try to reinitialize and retry
       if (this.mobileOptimizations) {
         console.log('📱 Mobile: Attempting recovery...');
@@ -1033,7 +1035,7 @@ class AudioManager {
           console.error('❌ Recovery failed:', retryError);
         }
       }
-      
+
       throw error;
     }
   }
@@ -1201,7 +1203,7 @@ class AudioManager {
     try {
       // Get AudioContext from active service
       let audioContext: AudioContext | null = null;
-      
+
       if (this.activeService.audioContext) {
         audioContext = this.activeService.audioContext;
       } else if (this.currentEngine === 'guitarset' && (this.activeService as any).audioContext) {
@@ -1218,7 +1220,7 @@ class AudioManager {
       // Create and play the buffer directly
       const source = audioContext.createBufferSource();
       source.buffer = buffer;
-      
+
       // Get gain node from active service if available
       let gainNode: GainNode | null = null;
       if (this.activeService.gainNode) {
@@ -1228,10 +1230,12 @@ class AudioManager {
         gainNode = audioContext.createGain();
         gainNode.connect(audioContext.destination);
       }
-      
-      source.connect(gainNode);
-      source.start(0);
-      
+
+      if (gainNode) {
+        source.connect(gainNode);
+        source.start(0);
+      }
+
       this.lastAudioTime = Date.now();
       console.log('✅ Sample played successfully');
       return true;
@@ -1291,7 +1295,7 @@ class AudioManager {
       // Obter AudioBus de forma assíncrona para evitar dependência circular
       const { getAudioBus } = await import('@/audio');
       const audioBus = getAudioBus();
-      
+
       if (!audioBus) {
         console.debug('[AudioManager] Ritual sonoro não tocado: AudioBus não disponível');
         return;
@@ -1300,7 +1304,7 @@ class AudioManager {
       // Verificar se AudioEngine está pronto
       const { AudioEngine } = await import('@/audio');
       const audioEngine = AudioEngine.getInstance();
-      
+
       if (!audioEngine.isReady()) {
         console.debug('[AudioManager] Ritual sonoro não tocado: AudioEngine não está pronto');
         return;
@@ -1351,28 +1355,28 @@ export const unifiedAudioService = {
   // Additional methods for compatibility
   getStatus: () => audioManager.getStatus(),
   reinitialize: () => audioManager.reinitialize(),
-  
+
   // Expose audioManager for testing
   __audioManager: audioManager,
-  
+
   // Singleton getInstance pattern for testing
   getInstance: () => audioManager,
-  
+
   // Play sample method
   playSample: (params: { buffer: AudioBuffer; channel?: string }) => audioManager.playSample(params),
-  
+
   // User interaction methods
   markUserInteraction: () => audioManager.markUserInteraction(),
   hasUserInteractedWithAudio: () => audioManager.hasUserInteractedWithAudio(),
-  
+
   // AudioContext access for scheduling
   getAudioContext: () => {
     // Get AudioContext from active service
     if (!audioManager['activeService']) return null;
-    
+
     const activeService = audioManager['activeService'];
     const currentEngine = audioManager['currentEngine'];
-    
+
     if (activeService.audioContext) {
       return activeService.audioContext;
     } else if (currentEngine === 'guitarset' && (activeService as any).audioContext) {
@@ -1380,7 +1384,7 @@ export const unifiedAudioService = {
     } else if (currentEngine === 'philharmonia' && (activeService as any).audioContext) {
       return (activeService as any).audioContext;
     }
-    
+
     return null;
   },
 };

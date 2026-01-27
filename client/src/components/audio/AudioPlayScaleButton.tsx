@@ -12,30 +12,33 @@ interface ScalePlayButtonProps {
   className?: string;
 }
 
-export function AudioPlayScaleButton({ 
+export function AudioPlayScaleButton({
   scaleName,
   root,
   intervals,
-  size = 'md', 
+  size = 'md',
   showLabel = true,
-  className = '' 
+  className = ''
 }: ScalePlayButtonProps) {
   const { isReady, initialize } = useAudio();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleClick = async () => {
+    // Mark interaction immediately - ALWAYS
+    await unifiedAudioService.markUserInteraction();
+
     if (!isReady) {
       setIsLoading(true);
       await initialize();
       setIsLoading(false);
     }
-    
+
     try {
       setIsPlaying(true);
       await unifiedAudioService.ensureInitialized();
       await unifiedAudioService.playScale(scaleName, root, intervals, 0.5);
-      
+
       // Reset after scale finishes (approximate duration)
       const duration = (intervals.length + 1) * 500; // 500ms per note
       setTimeout(() => {
@@ -66,8 +69,8 @@ export function AudioPlayScaleButton({
       className={`
         ${sizeClasses[size]}
         rounded-full transition-all
-        ${isPlaying 
-          ? 'bg-primary text-white scale-110' 
+        ${isPlaying
+          ? 'bg-primary text-white scale-110'
           : 'bg-muted hover:bg-muted/80'
         }
         ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}

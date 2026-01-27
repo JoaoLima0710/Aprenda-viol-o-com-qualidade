@@ -3,10 +3,7 @@ import { useAudio } from '@/hooks/useAudio';
 import { useChordPlayer } from '@/hooks/useChordPlayer';
 import { AudioPlayChordButton } from '@/components/audio/AudioPlayChordButton';
 import { unifiedAudioService } from '@/services/UnifiedAudioService';
-import { Sidebar } from '@/components/layout/Sidebar';
-import { MobileHeader } from '@/components/layout/MobileHeader';
-import { MobileSidebar } from '@/components/layout/MobileSidebar';
-import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useGamificationStore } from '@/stores/useGamificationStore';
@@ -3214,421 +3211,288 @@ export default function Theory() {
   });
 
   return (
-    <>
-      {/* DESKTOP VERSION */}
-      <div className="hidden lg:flex h-screen bg-[#0f0f1a] text-white overflow-hidden">
-        <Sidebar
-          userName={userName}
-          userLevel={level}
-          currentXP={xp}
-          xpToNextLevel={xpToNextLevel}
-          streak={currentStreak}
-        />
+    <PageLayout>
+      {/* 
+        Unified Render Strategy:
+        We reuse the standard responsive container from PageLayout.
+      */}
+      <div className="flex-1 w-full p-4 lg:p-8 space-y-6 lg:space-y-8">
 
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto p-8 space-y-8">
-            <Breadcrumbs />
-            {/* Header */}
+        {/* Navigation Breadcrumbs - Always visible */}
+        <Breadcrumbs />
+
+        {/* 
+          MODULE SELECTION vs MODULE CONTENT 
+          If selectedModule is null -> Show List
+          If selectedModule is set -> Show Content
+        */}
+
+        {!selectedModule ? (
+          /* --- MODULE LIST VIEW --- */
+          <div className="space-y-6">
             <header>
-              <h1 className="text-4xl font-bold text-white mb-2">📚 Teoria Musical</h1>
-              <p className="text-gray-400">Aprenda os fundamentos da música de forma prática e visual</p>
+              <h1 className="text-2xl lg:text-3xl font-bold text-white mb-2">Teoria Musical</h1>
+              <p className="text-gray-400">Domine a linguagem da música e desbloqueie seu potencial</p>
             </header>
 
-            {selectedModule ? (
-              <div className="space-y-6">
-                <Button
-                  onClick={() => setSelectedModule(null)}
-                  variant="outline"
-                  className="bg-transparent border-white/20 text-gray-300 hover:bg-white/5"
-                >
-                  ← Voltar aos Módulos
-                </Button>
-
-                <Card className="p-8 bg-gradient-to-br from-[#1a1a2e] to-[#16213e] border-white/10">
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#a855f7]">
-                      <selectedModule.icon className="w-8 h-8 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-3xl font-bold text-white">{selectedModule.title}</h2>
-                      <p className="text-gray-400">{selectedModule.description}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-6 mb-8 pb-6 border-b border-white/10">
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
-                      <Activity className="w-4 h-4" />
-                      <span>{selectedModule.duration}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${selectedModule.difficulty === 'beginner' ? 'bg-[#10b981]/20 text-[#10b981]' :
-                        selectedModule.difficulty === 'intermediate' ? 'bg-[#f59e0b]/20 text-[#f59e0b]' :
-                          'bg-[#ef4444]/20 text-[#ef4444]'
-                        }`}>
-                        {selectedModule.difficulty === 'beginner' ? 'Iniciante' :
-                          selectedModule.difficulty === 'intermediate' ? 'Intermediário' : 'Avançado'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {showQuiz && selectedModule.quiz ? (
-                    <TheoryQuiz
-                      moduleId={selectedModule.id}
-                      moduleTitle={selectedModule.title}
-                      questions={selectedModule.quiz}
-                      onComplete={() => setShowQuiz(false)}
-                    />
-                  ) : (
-                    <>
-                      {typeof selectedModule.content === 'function'
-                        ? selectedModule.content(currentLevel)
-                        : selectedModule.content}
-
-                      {/* Seção "Na Prática" */}
-                      {selectedModule.practicalApplication && (
-                        <div className="mt-8 p-6 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30">
-                          <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                            <Play className="w-6 h-6 text-green-400" />
-                            Na Prática
-                          </h3>
-                          <p className="text-gray-300 mb-4">
-                            Agora que você entendeu a teoria, veja como aplicar no violão:
-                          </p>
-                          {typeof selectedModule.practicalApplication === 'function'
-                            ? selectedModule.practicalApplication(currentLevel)
-                            : selectedModule.practicalApplication}
-                        </div>
-                      )}
-
-                      {/* Botões de Ação */}
-                      <div className="mt-6 pt-6 border-t border-white/10 space-y-3">
-                        {selectedModule.quiz && (
-                          <Button
-                            onClick={() => setShowQuiz(true)}
-                            className="w-full bg-gradient-to-r from-[#f59e0b] to-[#d97706] hover:from-[#d97706] hover:to-[#b45309] text-white py-6 text-lg"
-                          >
-                            <CheckCircle2 className="w-5 h-5 mr-2" />
-                            Fazer Quiz
-                          </Button>
-                        )}
-
-                        {/* Botão de Prática baseado no módulo */}
-                        {(() => {
-                          const practiceRoutes: Record<string, { path: string; label: string }> = {
-                            'fundamentals': { path: '/practice', label: 'Treino de Ritmo' },
-                            'fretboard-notes': { path: '/scales', label: 'Treino de Escalas' },
-                            'chord-formation': { path: '/chords', label: 'Treino de Acordes' },
-                            'straight-swing': { path: '/practice', label: 'Treino de Ritmo' },
-                            'scales': { path: '/scales', label: 'Treino de Escalas' },
-                            'intervals': { path: '/practice', label: 'Treino de Ouvido' },
-                            'progressions': { path: '/songs', label: 'Tocar Músicas' },
-                            'circle-of-fifths': { path: '/songs', label: 'Explorar Músicas' },
-                          };
-
-                          const practice = practiceRoutes[selectedModule.id];
-
-                          return practice ? (
-                            <Link href={practice.path}>
-                              <Button
-                                onClick={() => {
-                                  // Completar módulo e desbloquear práticas relacionadas
-                                  completeModule(selectedModule.id, 100);
-                                  checkAndUnlockFromTheory(selectedModule.id, 100);
-                                }}
-                                className="w-full bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white py-6 text-lg"
-                              >
-                                <Play className="w-5 h-5 mr-2" />
-                                Ir para {practice.label}
-                              </Button>
-                            </Link>
-                          ) : (
-                            <Button
-                              onClick={() => {
-                                completeModule(selectedModule.id, 100);
-                                checkAndUnlockFromTheory(selectedModule.id, 100);
-                              }}
-                              className="w-full bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white py-6 text-lg"
-                            >
-                              <CheckCircle2 className="w-5 h-5 mr-2" />
-                              Marcar como Completo
-                            </Button>
-                          );
-                        })()}
-                      </div>
-                    </>
-                  )}
-                </Card>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {/* Indicador de Nível Atual */}
-                <div className="p-4 rounded-lg bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-400 mb-1">Nível Teórico Atual</p>
-                      <p className="text-xl font-bold text-white">
-                        {currentLevel === 'basic' ? 'Básico' : currentLevel === 'intermediate' ? 'Intermediário' : 'Avançado'}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-400">Módulos Desbloqueados</p>
-                      <p className="text-xl font-bold text-green-400">{availableModules.length}/{THEORY_MODULES.length}</p>
-                    </div>
-                  </div>
+            {/* Introduction Card (Desktop only usually, or simplified) */}
+            <div className="hidden lg:block bg-gradient-to-r from-purple-900/40 to-blue-900/40 border border-white/10 rounded-xl p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-purple-500/20 rounded-lg">
+                  <Book className="w-8 h-8 text-purple-400" />
                 </div>
-
-                {/* Módulos Disponíveis */}
                 <div>
-                  <h2 className="text-2xl font-bold text-white mb-4">Módulos Disponíveis</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {availableModules.map((module) => (
-                      <Card
-                        key={module.id}
-                        className="p-6 bg-gradient-to-br from-[#1a1a2e] to-[#16213e] border-white/10 hover:border-[#8b5cf6]/50 transition-all cursor-pointer group"
-                        onClick={() => setSelectedModule(module)}
-                      >
-                        <div className="flex items-start gap-4 mb-4">
-                          <div className="p-3 rounded-lg bg-gradient-to-br from-[#8b5cf6] to-[#a855f7] group-hover:scale-110 transition-transform">
-                            <module.icon className="w-6 h-6 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="text-xl font-bold text-white mb-2">{module.title}</h3>
-                            <p className="text-sm text-gray-400 mb-3">{module.description}</p>
-
-                            <div className="flex items-center gap-4 mb-3">
-                              <span className="text-xs text-gray-500">{module.duration}</span>
-                              <span className={`px-2 py-1 rounded text-xs font-semibold ${module.difficulty === 'beginner' ? 'bg-[#10b981]/20 text-[#10b981]' :
-                                module.difficulty === 'intermediate' ? 'bg-[#f59e0b]/20 text-[#f59e0b]' :
-                                  'bg-[#ef4444]/20 text-[#ef4444]'
-                                }`}>
-                                {module.difficulty === 'beginner' ? 'Iniciante' :
-                                  module.difficulty === 'intermediate' ? 'Intermediário' : 'Avançado'}
-                              </span>
-                            </div>
-
-                            <div className="flex flex-wrap gap-2">
-                              {module.topics.map((topic) => (
-                                <span
-                                  key={topic}
-                                  className="px-2 py-1 rounded bg-white/5 text-xs text-gray-400"
-                                >
-                                  {topic}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        <Button
-                          className="w-full bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] hover:from-[#7c3aed] hover:to-[#9333ea] text-white"
-                        >
-                          <Play className="w-4 h-4 mr-2" />
-                          Começar Módulo
-                        </Button>
-                      </Card>
-                    ))}
-                  </div>
+                  <h2 className="text-xl font-bold text-white mb-2">Por que estudar teoria?</h2>
+                  <p className="text-gray-300">
+                    A teoria musical não é um conjunto de regras para te restringir, mas sim
+                    ferramentas para te dar liberdade. Entender como a música funciona permite
+                    que você aprenda mais rápido, tire músicas de ouvido com facilidade e
+                    crie suas próprias composições.
+                  </p>
                 </div>
-
-                {/* Módulos Bloqueados */}
-                {lockedModules.length > 0 && (
-                  <div>
-                    <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                      <Lock className="w-6 h-6 text-gray-400" />
-                      Módulos Bloqueados
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {lockedModules.map((module) => {
-                        const missingReqs = getMissingRequirements(
-                          module.id,
-                          module.prerequisites,
-                          module.minAccuracy
-                        );
-
-                        return (
-                          <Card
-                            key={module.id}
-                            className="p-6 bg-gradient-to-br from-gray-800/50 to-gray-900/50 border-gray-700/50 opacity-60 cursor-not-allowed"
-                          >
-                            <div className="flex items-center gap-3 mb-4">
-                              <div className="p-3 rounded-lg bg-gray-700/50">
-                                <module.icon className="w-6 h-6 text-gray-500" />
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-bold text-gray-400">{module.title}</h3>
-                                  <Lock className="w-4 h-4 text-gray-500" />
-                                </div>
-                                <p className="text-sm text-gray-500">{module.description}</p>
-                              </div>
-                            </div>
-
-                            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 mb-4">
-                              <div className="flex items-start gap-2">
-                                <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5" />
-                                <div className="flex-1">
-                                  <p className="text-xs font-semibold text-amber-400 mb-1">Requisitos não atendidos:</p>
-                                  <ul className="text-xs text-gray-400 space-y-1">
-                                    {missingReqs.length > 0 ? (
-                                      missingReqs.map((req, idx) => (
-                                        <li key={idx} className="list-disc list-inside">{req}</li>
-                                      ))
-                                    ) : (
-                                      <li>Complete módulos anteriores com {module.minAccuracy || 70}% de precisão</li>
-                                    )}
-                                  </ul>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <span className={`px-2 py-1 rounded text-xs font-semibold ${module.level === 'basic' ? 'bg-blue-500/20 text-blue-400' :
-                                module.level === 'intermediate' ? 'bg-purple-500/20 text-purple-400' :
-                                  'bg-red-500/20 text-red-400'
-                                }`}>
-                                {module.level === 'basic' ? 'Básico' :
-                                  module.level === 'intermediate' ? 'Intermediário' : 'Avançado'}
-                              </span>
-                            </div>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
               </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* MOBILE VERSION */}
-      <div className="lg:hidden min-h-screen bg-[#0f0f1a] text-white pb-20">
-        <MobileSidebar
-          isOpen={isMobileSidebarOpen}
-          onClose={() => setIsMobileSidebarOpen(false)}
-          userName={userName}
-          userLevel={level}
-          currentXP={xp}
-          xpToNextLevel={xpToNextLevel}
-          streak={currentStreak}
-        />
-
-        <MobileHeader
-          userName={userName}
-          onMenuClick={() => setIsMobileSidebarOpen(true)}
-        />
-
-        <div className="p-4 space-y-6">
-          <Breadcrumbs />
-          {selectedModule ? (
-            <div className="space-y-4">
-              <Button
-                onClick={() => setSelectedModule(null)}
-                variant="outline"
-                className="bg-transparent border-white/20 text-gray-300"
-              >
-                ← Voltar
-              </Button>
-
-              <Card className="p-6 bg-gradient-to-br from-[#1a1a2e] to-[#16213e] border-white/10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-3 rounded-lg bg-gradient-to-br from-[#8b5cf6] to-[#a855f7]">
-                    <selectedModule.icon className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-white">{selectedModule.title}</h2>
-                  </div>
-                </div>
-
-                {showQuiz && selectedModule.quiz ? (
-                  <TheoryQuiz
-                    moduleId={selectedModule.id}
-                    moduleTitle={selectedModule.title}
-                    questions={selectedModule.quiz}
-                    onComplete={() => setShowQuiz(false)}
-                  />
-                ) : (
-                  <>
-                    {typeof selectedModule.content === 'function'
-                      ? selectedModule.content(currentLevel)
-                      : selectedModule.content}
-
-                    {/* Botões de Ação */}
-                    <div className="mt-6 pt-6 border-t border-white/10 space-y-3">
-                      {selectedModule.quiz && (
-                        <Button
-                          onClick={() => setShowQuiz(true)}
-                          className="w-full bg-gradient-to-r from-[#f59e0b] to-[#d97706] hover:from-[#d97706] hover:to-[#b45309] text-white py-6 text-lg"
-                        >
-                          <CheckCircle2 className="w-5 h-5 mr-2" />
-                          Fazer Quiz
-                        </Button>
-                      )}
-
-                      <Button
-                        onClick={() => {
-                          // Completar módulo ao sair
-                          completeModule(selectedModule.id, 100); // Assumir 100% se completou visualização
-
-                          if (selectedModule.id === 'intervals') window.location.href = '/practice';
-                          if (selectedModule.id === 'scales') window.location.href = '/scales';
-                          if (selectedModule.id === 'chord-formation') window.location.href = '/chords';
-                          if (selectedModule.id === 'progressions') window.location.href = '/songs';
-                        }}
-                        className="w-full bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white py-6 text-lg"
-                      >
-                        <Play className="w-5 h-5 mr-2" />
-                        Praticar Agora
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </Card>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {THEORY_MODULES.map((module) => (
+
+            {/* Level Selection Tabs */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex space-x-1 rounded-xl bg-white/5 p-1">
+                {(['basic', 'intermediate', 'advanced'] as const).map((lvl) => (
+                  <button
+                    key={lvl}
+                    onClick={() => setCurrentLevel(lvl)}
+                    className={`
+                          px-4 py-2 rounded-lg text-sm font-medium transition-all
+                          ${currentLevel === lvl
+                        ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                      }
+                        `}
+                  >
+                    {lvl === 'basic' ? 'Básico' : lvl === 'intermediate' ? 'Intermediário' : 'Avançado'}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                <Activity className="w-4 h-4" />
+                <span>{availableModules.length} módulos disponíveis</span>
+              </div>
+            </div>
+
+            {/* Modules Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {availableModules.map((module) => (
                 <Card
                   key={module.id}
-                  className="p-4 bg-gradient-to-br from-[#1a1a2e] to-[#16213e] border-white/10"
+                  className="relative overflow-hidden bg-[#1a1a2e] border-white/10 hover:border-purple-500/50 hover:shadow-[0_0_20px_rgba(168,85,247,0.15)] transition-all cursor-pointer group"
                   onClick={() => setSelectedModule(module)}
                 >
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="p-2 rounded-lg bg-gradient-to-br from-[#8b5cf6] to-[#a855f7]">
-                      <module.icon className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-white mb-1">{module.title}</h3>
-                      <p className="text-sm text-gray-400 mb-2">{module.description}</p>
-
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-xs text-gray-500">{module.duration}</span>
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${module.difficulty === 'beginner' ? 'bg-[#10b981]/20 text-[#10b981]' :
-                          module.difficulty === 'intermediate' ? 'bg-[#f59e0b]/20 text-[#f59e0b]' :
-                            'bg-[#ef4444]/20 text-[#ef4444]'
-                          }`}>
-                          {module.difficulty === 'beginner' ? 'Iniciante' :
-                            module.difficulty === 'intermediate' ? 'Intermediário' : 'Avançado'}
-                        </span>
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 text-white flex items-center justify-center mb-4 transition-transform group-hover:scale-110 duration-300">
+                        <module.icon className="w-6 h-6" />
                       </div>
                     </div>
-                  </div>
 
-                  <Button
-                    className="w-full bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] text-white text-sm"
-                  >
-                    <Play className="w-4 h-4 mr-2" />
-                    Começar
-                  </Button>
+                    <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">
+                      {module.title}
+                    </h3>
+                    <p className="text-sm text-gray-400 mb-4 line-clamp-2">
+                      {module.description}
+                    </p>
+
+                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <Activity className="w-3 h-3" />
+                        <span>{module.difficulty === 'beginner' ? 'Iniciante' : module.difficulty === 'intermediate' ? 'Intermediário' : 'Avançado'}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        <span>{module.duration}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-white/5">
+                      {module.topics.slice(0, 3).map((topic) => (
+                        <span
+                          key={topic}
+                          className="px-2 py-1 rounded bg-white/5 text-xs text-gray-400"
+                        >
+                          {topic}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </Card>
               ))}
             </div>
-          )}
-        </div>
 
-        <MobileBottomNav />
+            {/* Locked Modules */}
+            {lockedModules.length > 0 && (
+              <div className="mt-12">
+                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                  <Lock className="w-5 h-5 text-gray-400" />
+                  Módulos Bloqueados
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {lockedModules.map((module) => {
+                    const missingReqs = getMissingRequirements(
+                      module.id,
+                      module.prerequisites,
+                      module.minAccuracy
+                    );
+                    return (
+                      <Card
+                        key={module.id}
+                        className="p-6 bg-gradient-to-br from-gray-800/50 to-gray-900/50 border-gray-700/50 opacity-60 cursor-not-allowed"
+                      >
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="p-3 rounded-lg bg-gray-700/50">
+                            <module.icon className="w-6 h-6 text-gray-500" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-bold text-gray-400">{module.title}</h3>
+                            <p className="text-sm text-gray-500">{module.description}</p>
+                          </div>
+                        </div>
+                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                          <p className="text-xs text-red-400 flex items-center gap-2 mb-1">
+                            <AlertCircle className="w-3 h-3" />
+                            Pré-requisitos:
+                          </p>
+                          <ul className="text-xs text-gray-400 list-disc list-inside">
+                            {missingReqs.length > 0 ? (
+                              missingReqs.map((req, idx) => <li key={idx}>{req}</li>)
+                            ) : (
+                              <li>Completar módulos anteriores</li>
+                            )}
+                          </ul>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* --- MODULE DETAIL VIEW --- */
+          <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+            {/* Action Bar */}
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={() => setSelectedModule(null)}
+                variant="outline"
+                className="bg-transparent border-white/20 text-gray-300 hover:text-white"
+              >
+                ← Voltar para Módulos
+              </Button>
+              <div className="h-6 w-px bg-white/10 hidden sm:block" />
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <selectedModule.icon className="w-5 h-5 text-purple-400" />
+                {selectedModule.title}
+              </h2>
+            </div>
+
+            {/* Main Content Card */}
+            <Card className="p-6 lg:p-10 bg-[#1a1a2e] border-white/10 min-h-[600px]">
+              {showQuiz && selectedModule.quiz ? (
+                <TheoryQuiz
+                  moduleId={selectedModule.id}
+                  moduleTitle={selectedModule.title}
+                  questions={selectedModule.quiz}
+                  onComplete={() => {
+                    setShowQuiz(false);
+                    // Update progress on completion
+                    // completeModule call is handled in action buttons usually, but quiz completion is good trigger too
+                  }}
+                />
+              ) : (
+                <div className="space-y-8">
+                  {/* Dynamic Content Rendering */}
+                  {typeof selectedModule.content === 'function'
+                    ? selectedModule.content(currentLevel)
+                    : selectedModule.content
+                  }
+
+                  {/* Practical Application Section */}
+                  {selectedModule.practicalApplication && (
+                    <div className="mt-8 p-6 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30">
+                      <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                        <Play className="w-6 h-6 text-green-400" />
+                        Na Prática
+                      </h3>
+                      <p className="text-gray-300 mb-4">
+                        Agora que você entendeu a teoria, veja como aplicar no violão:
+                      </p>
+                      {typeof selectedModule.practicalApplication === 'function'
+                        ? selectedModule.practicalApplication(currentLevel)
+                        : selectedModule.practicalApplication}
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row gap-4 justify-end">
+                    {selectedModule.quiz && (
+                      <Button
+                        onClick={() => setShowQuiz(true)}
+                        className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white min-w-[200px]"
+                        size="lg"
+                      >
+                        <CheckCircle2 className="w-5 h-5 mr-2" />
+                        Fazer Quiz
+                      </Button>
+                    )}
+
+                    {/* Dynamic Practice Button */}
+                    {(() => {
+                      const practiceRoutes: Record<string, { path: string; label: string }> = {
+                        'fundamentals': { path: '/practice', label: 'Treino de Ritmo' },
+                        'fretboard-notes': { path: '/scales', label: 'Treino de Escalas' },
+                        'chord-formation': { path: '/chords', label: 'Treino de Acordes' },
+                        'straight-swing': { path: '/practice', label: 'Treino de Ritmo' },
+                        'scales': { path: '/scales', label: 'Treino de Escalas' },
+                        'intervals': { path: '/practice', label: 'Treino de Ouvido' },
+                        'progressions': { path: '/songs', label: 'Tocar Músicas' },
+                        'circle-of-fifths': { path: '/songs', label: 'Explorar Músicas' },
+                      };
+
+                      const practice = practiceRoutes[selectedModule.id];
+
+                      return practice ? (
+                        <Link href={practice.path}>
+                          <Button
+                            onClick={() => {
+                              completeModule(selectedModule.id, 100);
+                              checkAndUnlockFromTheory(selectedModule.id, 100);
+                            }}
+                            className="w-full sm:w-auto bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white py-6 text-lg min-w-[200px]"
+                          >
+                            <Play className="w-5 h-5 mr-2" />
+                            Ir para {practice.label}
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Button
+                          onClick={() => {
+                            completeModule(selectedModule.id, 100);
+                            checkAndUnlockFromTheory(selectedModule.id, 100);
+                          }}
+                          className="w-full sm:w-auto bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white py-6 text-lg min-w-[200px]"
+                        >
+                          <CheckCircle2 className="w-5 h-5 mr-2" />
+                          Marcar como Completo
+                        </Button>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+            </Card>
+          </div>
+        )}
+
       </div>
-    </>
+    </PageLayout>
   );
 }
