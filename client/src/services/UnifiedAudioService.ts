@@ -390,11 +390,25 @@ class AudioManager {
 
   stopAll(): void {
     try {
-      if (this.activeService?.stopAll) this.activeService.stopAll();
-      if (audioService.stopAll) audioService.stopAll();
-      if (audioServiceWithSamples.stopAll) audioServiceWithSamples.stopAll();
-      if (guitarSetAudioService.stopAll) guitarSetAudioService.stopAll();
-      if (philharmoniaAudioService.stopAll) philharmoniaAudioService.stopAll();
+      // 1. Parar primeiro o serviço ativo (prioridade máxima)
+      if (this.activeService?.stopAll) {
+        this.activeService.stopAll();
+      }
+
+      // 2. Parar motores secundários apenas se não forem o ativo, 
+      // para evitar logs duplicados e redundância
+      if (this.currentEngine !== 'synthesis' && audioService.stopAll) {
+        audioService.stopAll();
+      }
+      if (this.currentEngine !== 'samples' && audioServiceWithSamples.stopAll) {
+        audioServiceWithSamples.stopAll();
+      }
+      if (this.currentEngine !== 'guitarset' && guitarSetAudioService.stopAll) {
+        guitarSetAudioService.stopAll();
+      }
+      if (this.currentEngine !== 'philharmonia' && philharmoniaAudioService.stopAll) {
+        philharmoniaAudioService.stopAll();
+      }
     } catch (error) {
       console.error('Error stopping audio:', error);
     }

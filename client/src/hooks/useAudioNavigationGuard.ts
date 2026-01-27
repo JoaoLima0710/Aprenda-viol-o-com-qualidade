@@ -41,15 +41,15 @@ export function useAudioNavigationGuard() {
     // Se mudou de rota, fazer fade-out suave e limpar schedulers
     if (previousLocationRef.current !== location) {
       console.log(`🛑 [AudioGuard] Rota mudou de ${previousLocationRef.current} para ${location}, fazendo fade-out suave`);
-      
+
       // Parar sessão de lifecycle (navegação = stop)
       audioLifecycleManager.stopSession();
-      
+
       // Verificar se há treino ativo (prioridade máxima)
       import('@/services/AudioPriorityManager').then(({ audioPriorityManager }) => {
         const isTrainingActive = audioPriorityManager.isTrainingCurrentlyActive();
         const fadeOutDuration = isTrainingActive ? 0.2 : 0.15; // Fade-out um pouco mais longo para treino
-        
+
         // Fade-out suave de todo áudio
         unifiedAudioService.fadeOutAll(fadeOutDuration).catch((error) => {
           console.error('[AudioGuard] Erro no fade-out, usando stop abrupto:', error);
@@ -61,7 +61,7 @@ export function useAudioNavigationGuard() {
           unifiedAudioService.stopAll();
         });
       });
-      
+
       // Limpar AudioContextScheduler (cancelar eventos agendados)
       // Fazer isso após fade-out começar para não interromper
       setTimeout(() => {
@@ -72,14 +72,14 @@ export function useAudioNavigationGuard() {
           // Ignorar se não estiver disponível
         });
       }, 50); // Pequeno delay para não interromper fade-out
-      
+
       // Remover contexto de áudio após fade-out
       setTimeout(() => {
         import('@/services/AudioPriorityManager').then(({ audioPriorityManager }) => {
           audioPriorityManager.setContext(null);
-        }).catch(() => {});
+        }).catch(() => { });
       }, 200); // Após fade-out terminar
-      
+
       previousLocationRef.current = location;
     }
   }, [location]);
@@ -91,17 +91,17 @@ export function useAudioNavigationGuard() {
         // App escondido: suspender sessão e fazer fade-out suave
         console.log('📱 [AudioGuard] App escondido, suspendendo sessão e fazendo fade-out suave');
         isPausedByVisibilityRef.current = true;
-        
+
         // Suspender sessão de lifecycle
         audioLifecycleManager.suspendSession();
-        
+
         try {
           // Fade-out suave de todo áudio
           unifiedAudioService.fadeOutAll(0.15).catch((error) => {
             console.error('[AudioGuard] Erro no fade-out, usando stop abrupto:', error);
             unifiedAudioService.stopAll();
           });
-          
+
           // Limpar AudioContextScheduler após fade-out começar
           setTimeout(() => {
             import('@/services/AudioContextScheduler').then(({ audioContextScheduler }) => {
@@ -135,7 +135,11 @@ export function useAudioNavigationGuard() {
   useEffect(() => {
     return () => {
       try {
-        unifiedAudioService.stopAll();
+        // Apenas parar se houver algo realmente tocando e o serviço estiver inicializado
+        const status = unifiedAudioService.getStatus();
+        if (status.initialized && status.hasActiveService) {
+          unifiedAudioService.stopAll();
+        }
       } catch (error) {
         console.error('[AudioGuard] Erro no cleanup:', error);
       }

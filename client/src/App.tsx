@@ -18,16 +18,17 @@ import { useAudioNavigationGuard } from './hooks/useAudioNavigationGuard';
 // Detectar gestos do usuário para desbloquear áudio
 if (typeof document !== 'undefined') {
   document.addEventListener('click', () => {
-    console.log('User gesture detected');
-    const audioEngine = (window as any).__audioEngine;
-    if (audioEngine) {
-      try {
-        const ctx = audioEngine.getContext();
-        console.log('AudioContext state:', ctx?.state);
-      } catch {
-        console.log('AudioContext not initialized yet');
+    import('./services/UnifiedAudioService').then(({ unifiedAudioService }) => {
+      const ctx = unifiedAudioService.getAudioContext();
+      if (ctx) {
+        console.log('🎵 User gesture detected, AudioContext state:', ctx.state);
+        if (ctx.state === 'suspended') {
+          ctx.resume().catch((e: any) => console.warn('Failed to resume on gesture:', e));
+        }
       }
-    }
+    }).catch(() => {
+      // Ignorar se serviço não estiver pronto
+    });
   });
 }
 
@@ -64,7 +65,7 @@ function PageLoader() {
 
 function Router() {
   const { isAuthenticated, refreshUser } = useUserStore();
-  
+
   // Proteger áudio durante navegação
   useAudioNavigationGuard();
 
