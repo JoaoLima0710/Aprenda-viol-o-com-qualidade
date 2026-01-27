@@ -389,6 +389,9 @@ class AudioManager {
   }
 
   stopAll(): void {
+    // DEBUG: Rastrear quem está chamando stopAll
+    console.trace('🛑 [UnifiedAudioService] stopAll called from:');
+
     try {
       // 1. Parar primeiro o serviço ativo (prioridade máxima)
       if (this.activeService?.stopAll) {
