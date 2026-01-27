@@ -273,6 +273,20 @@ class AudioResilienceService {
       recent: this.failures.slice(-5),
     };
   }
+
+  /**
+   * Obtém histórico de falhas
+   */
+  getFailureHistory(): AudioFailure[] {
+    return [...this.failures];
+  }
+
+  /**
+   * Limpa histórico de falhas
+   */
+  clearFailureHistory(): void {
+    this.reset();
+  }
 }
 
 export const audioResilienceService = new AudioResilienceService();
