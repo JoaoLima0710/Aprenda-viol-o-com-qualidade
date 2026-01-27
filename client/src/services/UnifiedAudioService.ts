@@ -150,7 +150,7 @@ class AudioManager {
 
       const success = await this.switchEngine(actualEngine);
       if (success) {
-        await this.setInstrument(instrument as any);
+        await this.setInstrument(instrument as any, true);
         if (this.mobileOptimizations || this.isTablet) await this.ensureAudioContext();
         this.isInitialized = true;
         console.log('✅ AudioManager initialized successfully');
@@ -253,8 +253,8 @@ class AudioManager {
     }
   }
 
-  async setInstrument(instrument: InstrumentType): Promise<void> {
-    await this.ensureInitialized();
+  async setInstrument(instrument: InstrumentType, skipEnsure = false): Promise<void> {
+    if (!skipEnsure) await this.ensureInitialized();
     if (!this.activeService) throw new Error('Audio service not initialized');
 
     try {

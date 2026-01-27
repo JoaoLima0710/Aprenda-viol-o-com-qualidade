@@ -134,7 +134,7 @@ class SampleLoader {
       'C', 'Cm', 'C7',
       'D', 'Dm', 'D7',
       'E', 'Em', // E7 bloqueado
-      'F', 'Fm', 'F7',
+      'F', 'Fm', // F7 bloqueado (arquivo faltando)
       'G', 'Gm', // G7 bloqueado
     ].filter(chord => !BLOCKED_CHORDS.has(chord));
 
