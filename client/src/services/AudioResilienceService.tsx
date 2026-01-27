@@ -238,6 +238,13 @@ class AudioResilienceService {
   }
 
   /**
+   * Limpa o histórico de falhas (alias para reset)
+   */
+  clearFailureHistory(): void {
+    this.reset();
+  }
+
+  /**
    * Obtém estatísticas de falhas
    */
   getFailureStats(): {

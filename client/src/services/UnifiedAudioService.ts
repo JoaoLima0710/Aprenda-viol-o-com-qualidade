@@ -3,8 +3,8 @@ import { audioServiceWithSamples } from './AudioServiceWithSamples';
 import { guitarSetAudioService } from './GuitarSetAudioService';
 import { philharmoniaAudioService } from './PhilharmoniaAudioService';
 import { useAudioSettingsStore } from '@/stores/useAudioSettingsStore';
-import type { InstrumentType } from './AudioServiceWithSamples';
-import type { AudioEngineType } from '@/stores/useAudioSettingsStore';
+// import type { InstrumentType } from './AudioServiceWithSamples';
+import type { AudioEngineType, InstrumentType } from '@/stores/useAudioSettingsStore';
 import {
   AudioError,
   AudioContextError,
@@ -53,6 +53,7 @@ class AudioManager {
         console.log('🎵 Audio engine changed from', this.currentEngine, 'to', state.audioEngine);
         this.switchEngine(state.audioEngine as any).catch(e => console.error('Error auto-switching engine:', e));
       }
+      return;
     });
 
     // Mobile-specific listeners

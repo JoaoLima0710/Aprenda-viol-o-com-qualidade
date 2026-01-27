@@ -1,0 +1,104 @@
+﻿client/src/audio/__tests__/AudioBootstrap.integration.test.tsx(44,77): error TS2345: Argument of type 'MouseEvent<HTMLButtonElement, MouseEvent>' is not assignable to parameter of type 'Event'.
+  Type 'MouseEvent<HTMLButtonElement, MouseEvent>' is missing the following properties from type 'Event': cancelBubble, composed, returnValue, srcElement, and 7 more.
+client/src/audio/__tests__/AudioBootstrap.integration.test.tsx(51,3): error TS2304: Cannot find name 'beforeEach'.
+client/src/components/audio/AITutorAudioFeedback.tsx(30,3): error TS2459: Module '"@/services/AIAudioTutorService"' declares 'PracticeContext' locally, but it is not exported.
+client/src/components/audio/AudioErrorDisplay.tsx(50,11): error TS1345: An expression of type 'void' cannot be tested for truthiness.
+client/src/components/audio/AudioErrorDisplay.tsx(62,28): error TS2551: Property 'clearFailureHistory' does not exist on type 'AudioResilienceService'. Did you mean 'getFailureHistory'?
+client/src/components/audio/AudioErrorDisplay.tsx(89,36): error TS2339: Property 'message' does not exist on type 'AudioFailure'.
+client/src/components/audio/AudioErrorDisplay.tsx(170,72): error TS2339: Property 'message' does not exist on type 'AudioFailure'.
+client/src/components/chords/__tests__/ChordHighlight.sync.test.tsx(122,35): error TS2802: Type 'MapIterator<[string, { callback: Function; delay: number; executed: boolean; }]>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/components/chords/__tests__/ChordHighlight.sync.test.tsx(139,7): error TS2345: Argument of type '(id: string, callback: Function, delay: number) => void' is not assignable to parameter of type 'NormalizedPrecedure<(id: string, callback: ScheduledCallback, delay?: number) => void>'.
+  Types of parameters 'delay' and 'delay' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.
+client/src/components/chords/ChordPictureInPicture.tsx(108,13): error TS7030: Not all code paths return a value.
+client/src/components/onboarding/CompleteOnboarding.tsx(65,47): error TS2304: Cannot find name 'PlacementLevel'.
+client/src/components/onboarding/CompleteOnboarding.tsx(68,44): error TS2339: Property 'applyPlacementTest' does not exist on type 'TheoryProgressionState'.
+client/src/components/onboarding/CompleteOnboarding.tsx(72,38): error TS2339: Property 'applyPlacementTest' does not exist on type 'ProgressionStore'.
+client/src/components/onboarding/CompleteOnboarding.tsx(140,15): error TS2339: Property 'updateUser' does not exist on type 'UserStore'.
+client/src/components/onboarding/CompleteOnboarding.tsx(254,18): error TS2552: Cannot find name 'PlacementTest'. Did you mean 'showPlacementTest'?
+client/src/components/onboarding/PlacementTest.tsx(164,60): error TS2554: Expected 1-2 arguments, but got 3.
+client/src/components/practice/__tests__/SoundRepeat.identical.test.tsx(14,10): error TS2614: Module '"@/audio/SampleLoader"' has no exported member 'SampleLoader'. Did you mean to use 'import SampleLoader from "@/audio/SampleLoader"' instead?
+client/src/components/practice/AdaptiveExercise.tsx(248,13): error TS7030: Not all code paths return a value.
+client/src/components/practice/EnhancedChordPractice.tsx(111,26): error TS2802: Type 'Set<number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/components/practice/EnhancedChordPractice.tsx(112,28): error TS2802: Type 'Set<number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/components/practice/EssentialIntervalTraining.tsx(593,15): error TS2322: Type '(exercise?: Exercise) => Promise<void>' is not assignable to type 'MouseEventHandler<HTMLButtonElement>'.
+  Types of parameters 'exercise' and 'event' are incompatible.
+    Type 'MouseEvent<HTMLButtonElement, MouseEvent>' is missing the following properties from type 'Exercise': interval, firstNote, secondNote, correctAnswer
+client/src/components/practice/PracticeMode.tsx(35,13): error TS7030: Not all code paths return a value.
+client/src/components/practice/PracticeMode.tsx(96,7): error TS2304: Cannot find name 'feedbackSoundService'.
+client/src/components/practice/PracticeMode.tsx(168,7): error TS2304: Cannot find name 'feedbackSoundService'.
+client/src/components/practice/RealtimeChordFeedback.tsx(98,13): error TS7030: Not all code paths return a value.
+client/src/components/practice/TranscriptionExercise.tsx(27,10): error TS2724: '"@/services/PitchDetectionService"' has no exported member named 'PitchDetectionService'. Did you mean 'pitchDetectionService'?
+client/src/components/practice/TranscriptionExercise.tsx(82,12): error TS2304: Cannot find name 'pitchService'.
+client/src/components/practice/TranscriptionExercise.tsx(147,60): error TS2554: Expected 1-2 arguments, but got 3.
+client/src/components/practice/VisualMetronome.tsx(80,9): error TS18047: 'gainNodeRef.current' is possibly 'null'.
+client/src/components/practice/VisualMetronome.tsx(81,9): error TS18047: 'gainNodeRef.current' is possibly 'null'.
+client/src/components/scales/EnhancedScalePractice.tsx(219,11): error TS2339: Property 'playNotes' does not exist on type 'UseAudioReturn'.
+client/src/components/scales/ScalePractice.tsx(93,11): error TS2339: Property 'playNotes' does not exist on type 'UseAudioReturn'.
+client/src/components/theory/ChordBuilder.tsx(147,11): error TS2339: Property 'playNotes' does not exist on type 'UseAudioReturn'.
+client/src/components/theory/IntervalBuilder.tsx(92,11): error TS2339: Property 'playNotes' does not exist on type 'UseAudioReturn'.
+client/src/components/theory/ProgressionBuilder.tsx(43,11): error TS2339: Property 'playChord' does not exist on type 'UseAudioReturn'.
+client/src/components/tuner/NoiseCalibration.tsx(137,33): error TS7030: Not all code paths return a value.
+client/src/components/tuner/NoiseCalibration.tsx(147,33): error TS7030: Not all code paths return a value.
+client/src/data/chords.ts(310,61): error TS2345: Argument of type '{ category: Chord["category"]; description: string; tips: string[]; } | { category: Chord["category"]; description: string; tips: string[]; } | { category: Chord["category"]; description: string; tips: string[]; } | ... 7 more ... | { ...; }' is not assignable to parameter of type 'Omit<Chord, "name" | "id" | "relatedChords" | "frets" | "fingers" | "fullName">'.
+  Type '{ category: Chord["category"]; description: string; tips: string[]; }' is missing the following properties from type 'Omit<Chord, "name" | "id" | "relatedChords" | "frets" | "fingers" | "fullName">': difficulty, xpReward
+client/src/hooks/useRealtimeChordDetection.ts(140,9): error TS2322: Type '"low_clarity"' is not assignable to type '"muted_string" | "wrong_fingering" | "poor_sustain" | "timing_issue" | "volume_inconsistent"'.
+client/src/hooks/useRealtimeChordDetection.ts(150,9): error TS2322: Type '"unstable"' is not assignable to type '"muted_string" | "wrong_fingering" | "poor_sustain" | "timing_issue" | "volume_inconsistent"'.
+client/src/hooks/useRealtimeChordDetection.ts(160,9): error TS2322: Type '"too_quiet"' is not assignable to type '"muted_string" | "wrong_fingering" | "poor_sustain" | "timing_issue" | "volume_inconsistent"'.
+client/src/hooks/useRealtimeChordDetection.ts(172,11): error TS2322: Type '"wrong_chord"' is not assignable to type '"muted_string" | "wrong_fingering" | "poor_sustain" | "timing_issue" | "volume_inconsistent"'.
+client/src/pages/Chords.tsx(103,51): error TS2345: Argument of type 'import("C:/Users/Joao/Desktop/Aprenda-viol-o-com-qualidade/client/src/stores/useAudioSettingsStore").InstrumentType' is not assignable to parameter of type 'import("C:/Users/Joao/Desktop/Aprenda-viol-o-com-qualidade/client/src/services/AudioServiceWithSamples").InstrumentType'.
+  Type '"banjo"' is not assignable to type 'InstrumentType'.
+client/src/pages/Explore.tsx(194,10): error TS2304: Cannot find name 'isBeginner'.
+client/src/pages/Explore.tsx(195,12): error TS2304: Cannot find name 'SimplifiedNav'.
+client/src/pages/Practice.tsx(61,7): error TS2322: Type '"practice"' is not assignable to type '"scale" | "chord" | "song" | "ear_training" | undefined'.
+client/src/pages/Theory.tsx(3262,36): error TS2552: Cannot find name 'setCurrentLevel'. Did you mean 'currentLevel'?
+client/src/pages/Theory.tsx(3310,26): error TS2552: Cannot find name 'Clock'. Did you mean 'Lock'?
+client/src/pages/ToolsPage.tsx(2,10): error TS2614: Module '"../components/audio/Metronome"' has no exported member 'Metronome'. Did you mean to use 'import Metronome from "../components/audio/Metronome"' instead?
+client/src/pages/ToolsPage.tsx(3,10): error TS2614: Module '"../components/audio/Tuner"' has no exported member 'Tuner'. Did you mean to use 'import Tuner from "../components/audio/Tuner"' instead?
+client/src/services/AdvancedAIService.ts(142,9): error TS2353: Object literal may only specify known properties, and 'category' does not exist in type 'Recommendation'.
+client/src/services/AdvancedAIService.ts(154,9): error TS2353: Object literal may only specify known properties, and 'category' does not exist in type 'Recommendation'.
+client/src/services/AdvancedAIService.ts(166,9): error TS2353: Object literal may only specify known properties, and 'category' does not exist in type 'Recommendation'.
+client/src/services/AudioContextScheduler.ts(171,33): error TS2802: Type 'MapIterator<[string, ScheduledEvent]>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/services/AudioServiceWithSamples.ts(84,50): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error'.
+client/src/services/AutoSaveService.ts(85,34): error TS2339: Property 'exercises' does not exist on type 'Partial<PracticeSession>'.
+client/src/services/AutoSaveService.ts(86,33): error TS2339: Property 'mistakes' does not exist on type 'Partial<PracticeSession>'.
+client/src/services/AutoSaveService.ts(87,37): error TS2339: Property 'improvements' does not exist on type 'Partial<PracticeSession>'.
+client/src/services/AutoSaveService.ts(89,7): error TS2322: Type 'number' is not assignable to type '"morning" | "afternoon" | "evening" | "night" | undefined'.
+client/src/services/AutoSaveService.ts(94,7): error TS2322: Type '"neutral" | "focused" | "frustrated" | "motivated" | "tired" | "excited"' is not assignable to type '"focused" | "frustrated" | "motivated" | "tired" | "excited" | undefined'.
+  Type '"neutral"' is not assignable to type '"focused" | "frustrated" | "motivated" | "tired" | "excited" | undefined'.
+client/src/services/ChordDetectorService.ts(701,25): error TS2802: Type 'Float32Array' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/services/ChordDetectorService.ts(714,25): error TS2802: Type 'Float32Array' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/services/ChordMasterySystem.ts(499,39): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/services/LLMIntegrationService.ts(187,7): error TS2739: Type '{ userProfile: any; }' is missing the following properties from type '{ userProfile: any; conversationHistory: any[]; currentSession: any; }': conversationHistory, currentSession
+client/src/services/LLMIntegrationService.ts(223,7): error TS2739: Type '{ userProfile: any; }' is missing the following properties from type '{ userProfile: any; conversationHistory: any[]; currentSession: any; }': conversationHistory, currentSession
+client/src/services/LLMIntegrationService.ts(261,7): error TS2739: Type '{ userProfile: any; }' is missing the following properties from type '{ userProfile: any; conversationHistory: any[]; currentSession: any; }': conversationHistory, currentSession
+client/src/services/NotificationService.ts(70,30): error TS2339: Property 'dailyGoalMinutes' does not exist on type 'UserProfile'.
+client/src/services/RealtimeAIFeedbackService.ts(182,37): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/services/RealtimeAIFeedbackService.ts(396,16): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/services/RhythmScheduler.ts(214,33): error TS2802: Type 'MapIterator<[string, RhythmEvent]>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/services/SongSegmentationService.ts(301,16): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/services/UnifiedAudioService.ts(48,59): error TS2322: Type 'Promise<boolean>' is not assignable to type 'Promise<void>'.
+  Type 'boolean' is not assignable to type 'void'.
+client/src/services/UnifiedAudioService.ts(240,30): error TS2322: Type 'import("C:/Users/Joao/Desktop/Aprenda-viol-o-com-qualidade/client/src/stores/useAudioSettingsStore").InstrumentType' is not assignable to type 'import("C:/Users/Joao/Desktop/Aprenda-viol-o-com-qualidade/client/src/services/AudioServiceWithSamples").InstrumentType'.
+  Type '"banjo"' is not assignable to type 'InstrumentType'.
+client/src/stores/useAdaptiveDifficultyStore.ts(149,13): error TS2322: Type 'number' is not assignable to type 'DifficultyLevel'.
+client/src/stores/useAdaptiveDifficultyStore.ts(152,13): error TS2322: Type 'number' is not assignable to type 'DifficultyLevel'.
+client/src/stores/useChordProgressionStore.ts(273,7): error TS2322: Type '(persistedState: unknown, currentState: ChordProgressionState) => { currentWeek: number; unlockedWeeks: Set<number>; weekProgress: Record<number, { week: number; chordsCompleted: Set<...>; averageAccuracy: number; unlocked: boolean; }> | { ...; }; ... 7 more ...; getWeekProgress: (week: number) => { ...; }; }' is not assignable to type '(persistedState: unknown, currentState: ChordProgressionState) => ChordProgressionState'.
+  Call signature return types '{ currentWeek: number; unlockedWeeks: Set<number>; weekProgress: Record<number, { week: number; chordsCompleted: Set<string>; averageAccuracy: number; unlocked: boolean; }> | { ...; }; ... 7 more ...; getWeekProgress: (week: number) => { ...; }; }' and 'ChordProgressionState' are incompatible.
+    The types of 'weekProgress' are incompatible between these types.
+      Type 'Record<number, { week: number; chordsCompleted: Set<string>; averageAccuracy: number; unlocked: boolean; }> | { [k: string]: { chordsCompleted: Set<string>; }; }' is not assignable to type 'Record<number, { week: number; chordsCompleted: Set<string>; averageAccuracy: number; unlocked: boolean; }>'.
+        Type '{ [k: string]: { chordsCompleted: Set<string>; }; }' is not assignable to type 'Record<number, { week: number; chordsCompleted: Set<string>; averageAccuracy: number; unlocked: boolean; }>'.
+          'string' and 'number' index signatures are incompatible.
+            Type '{ chordsCompleted: Set<string>; }' is missing the following properties from type '{ week: number; chordsCompleted: Set<string>; averageAccuracy: number; unlocked: boolean; }': week, averageAccuracy, unlocked
+client/src/stores/useTheoryProgressionStore.ts(205,49): error TS2367: This comparison appears to be unintentional because the types '"intermediate" | "advanced"' and '"basic"' have no overlap.
+client/src/test/setup.ts(70,1): error TS2739: Type '{ getItem: Mock<Procedure>; setItem: Mock<Procedure>; removeItem: Mock<Procedure>; clear: Mock<Procedure>; }' is missing the following properties from type 'Storage': length, key
+client/src/test/setup.ts(79,1): error TS2322: Type 'Mock<(cb: any) => Timeout>' is not assignable to type '(callback: FrameRequestCallback) => number'.
+  Type 'Timeout' is not assignable to type 'number'.
+client/src/test/testAISystem.ts(48,5): error TS2322: Type '"moderate"' is not assignable to type '"medium" | "slow" | "fast"'.
+client/src/test/testAISystem.ts(53,9): error TS2353: Object literal may only specify known properties, and 'severity' does not exist in type 'WeakArea'.
+client/src/test/testAISystem.ts(67,7): error TS2739: Type '{ id: string; type: "chord"; itemName: string; accuracy: number; duration: number; timestamp: number; }' is missing the following properties from type 'PracticeSession': itemId, errors, difficulty
+client/src/test/testAISystem.ts(145,5): error TS2322: Type '"moderate"' is not assignable to type '"medium" | "slow" | "fast"'.
+server/index.ts(28,23): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'number'.
