@@ -79,6 +79,7 @@ export const useAudioSettingsStore = create<AudioSettingsState>()(
       midGain: 0,
       trebleGain: 0,
       lowLatencyMode: false,
+      useMIDI: false,
       measuredLatency: null,
 
       // Actions
