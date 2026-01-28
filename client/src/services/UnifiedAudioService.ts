@@ -307,6 +307,26 @@ class AudioManager {
     try {
       if (this.mobileOptimizations || this.isTablet) await this.ensureAudioContext();
 
+      // Verificar se deve usar MIDI
+      const { useAudioSettingsStore } = await import('@/stores/useAudioSettingsStore');
+      const useMIDI = useAudioSettingsStore.getState().useMIDI;
+
+      if (useMIDI) {
+        // Usar MIDI para acordes
+        const { midiChordPlayer } = await import('./MIDIChordPlayer');
+
+        // Verificar se acorde tem MIDI disponível
+        if (midiChordPlayer.hasMIDI(chordName)) {
+          console.log(`🎹 [UnifiedAudioService] Usando MIDI para acorde: ${chordName}`);
+          await midiChordPlayer.playChord(chordName, duration || 2.5);
+          this.lastAudioTime = Date.now();
+          return true;
+        } else {
+          console.warn(`⚠️ [UnifiedAudioService] MIDI não disponível para ${chordName}, usando WAV`);
+        }
+      }
+
+      // Usar WAV samples (comportamento padrão)
       const { auditoryFatigueReducer } = await import('./AuditoryFatigueReducer');
       const variation = auditoryFatigueReducer.getVariation(`chord-${chordName}`);
       if (variation === null) return false;
