@@ -79,7 +79,7 @@ export const useAudioSettingsStore = create<AudioSettingsState>()(
       midGain: 0,
       trebleGain: 0,
       lowLatencyMode: false,
-      useMIDI: false,
+      useMIDI: true, // MIDI ativado por padrão para usar samples Gimme one-shot
       measuredLatency: null,
 
       // Actions
