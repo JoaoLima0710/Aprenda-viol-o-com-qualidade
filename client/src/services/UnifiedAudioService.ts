@@ -310,13 +310,17 @@ class AudioManager {
       // Verificar se deve usar MIDI
       const { useAudioSettingsStore } = await import('@/stores/useAudioSettingsStore');
       const useMIDI = useAudioSettingsStore.getState().useMIDI;
+      console.log(`🔍 [UnifiedAudioService] playChord(${chordName}) - useMIDI:`, useMIDI);
 
       if (useMIDI) {
         // Usar MIDI para acordes
         const { midiChordPlayer } = await import('./MIDIChordPlayer');
 
+        const hasMIDI = midiChordPlayer.hasMIDI(chordName);
+        console.log(`🔍 [UnifiedAudioService] midiChordPlayer.hasMIDI(${chordName}):`, hasMIDI);
+
         // Verificar se acorde tem MIDI disponível
-        if (midiChordPlayer.hasMIDI(chordName)) {
+        if (hasMIDI) {
           console.log(`🎹 [UnifiedAudioService] Usando MIDI para acorde: ${chordName}`);
           await midiChordPlayer.playChord(chordName, duration || 2.5);
           this.lastAudioTime = Date.now();
